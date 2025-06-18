@@ -35,15 +35,12 @@ export default function AddPlatformPage() {
     const [showAddDialog, setShowAddDialog] = useState(false)
     const [showVersionsDialog, setShowVersionsDialog] = useState(false)
     const [showDetailsDialog, setShowDetailsDialog] = useState(false)
-    const router = useRouter()
-
-    // Use our custom hook for platform management
+    const router = useRouter()    // Use our custom hook for platform management
     const {
         platforms,
         platformVersions,
         selectedPlatform,
         selectedVersion,
-        platformImage,
         loading: platformsLoading,
         notification,
         fetchPlatforms,
@@ -205,14 +202,11 @@ export default function AddPlatformPage() {
                 versions={platformVersions}
                 onClose={handleCloseVersions}
                 onVersionSelect={handleVersionSelect}
-            />
-
-            {/* Platform Details Dialog */}
+            />            {/* Platform Details Dialog */}
             <PlatformDetailsDialog
                 open={showDetailsDialog}
                 platform={selectedPlatform}
                 version={selectedVersion}
-                platformImage={platformImage}
                 onClose={handleCloseDetails}
                 onAddPlatform={handleAddSelectedPlatform}
             />

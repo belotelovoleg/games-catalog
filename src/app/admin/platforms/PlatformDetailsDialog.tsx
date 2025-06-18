@@ -23,7 +23,6 @@ interface PlatformDetailsDialogProps {
     open: boolean
     platform: IgdbPlatform | null
     version: IgdbPlatformVersion | null
-    platformImage: string | null
     onClose: () => void
     onAddPlatform: () => void
 }
@@ -32,13 +31,14 @@ export default function PlatformDetailsDialog({
     open, 
     platform, 
     version, 
-    platformImage, 
     onClose, 
     onAddPlatform 
-}: PlatformDetailsDialogProps) {
-    const displayName = version?.name || platform?.name
+}: PlatformDetailsDialogProps) {    const displayName = version?.name || platform?.name
     const [companies, setCompanies] = useState<Record<number, Company>>({})
-    const [loadingCompanies, setLoadingCompanies] = useState(false)    // Fetch company details when version is available and has companies
+    const [loadingCompanies, setLoadingCompanies] = useState(false)
+      // Use image from version first, then platform
+    const imageUrl = version?.imageUrl || platform?.imageUrl
+    
     useEffect(() => {
         if (version && open) {
             setLoadingCompanies(true)
@@ -139,12 +139,11 @@ export default function PlatformDetailsDialog({
                 Platform Details: {displayName}
             </DialogTitle>
             <DialogContent>
-                <Box sx={{ display: 'flex', gap: 3 }}>
-                    {/* Platform Image */}
+                <Box sx={{ display: 'flex', gap: 3 }}>                    {/* Platform Image */}
                     <Box sx={{ minWidth: 200 }}>
-                        {platformImage ? (
+                        {imageUrl ? (
                             <img 
-                                src={platformImage} 
+                                src={imageUrl} 
                                 alt={displayName}
                                 style={{ 
                                     width: '100%', 

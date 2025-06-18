@@ -27,7 +27,24 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    return NextResponse.json(versions)
+    // Add image URLs to each version
+    const versionsWithImages = await Promise.all(
+      versions.map(async (version) => {
+        let imageUrl = null
+        if (version.platform_logo) {
+          const image = await prisma.igdbImage.findUnique({
+            where: { igdbId: version.platform_logo }
+          })
+          imageUrl = image?.computed_url || null
+        }
+        return {
+          ...version,
+          imageUrl
+        }
+      })
+    )
+
+    return NextResponse.json(versionsWithImages)
   } catch (error) {
     console.error('Error fetching platform versions:', error)
     return NextResponse.json(

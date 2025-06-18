@@ -8,7 +8,6 @@ export function usePlatformManagement() {
     const [platformVersions, setPlatformVersions] = useState<IgdbPlatformVersion[]>([])
     const [selectedPlatform, setSelectedPlatform] = useState<IgdbPlatform | null>(null)
     const [selectedVersion, setSelectedVersion] = useState<IgdbPlatformVersion | null>(null)
-    const [platformImage, setPlatformImage] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
     const [notification, setNotification] = useState<{
         open: boolean
@@ -17,7 +16,8 @@ export function usePlatformManagement() {
     }>({
         open: false,
         message: '',
-        severity: 'info'    })
+        severity: 'info'
+    })
 
     const showNotification = useCallback((message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
         setNotification({ open: true, message, severity })
@@ -60,53 +60,34 @@ export function usePlatformManagement() {
             }
         } catch (error) {
             console.error('Error fetching platform versions:', error)
-        }
-        return []
-    }, [])
-
-    const fetchPlatformImage = useCallback(async (logoId: number) => {
-        try {
-            const response = await fetch(`/api/admin/igdb-images?logoId=${logoId}`)
-            if (response.ok) {
-                const data = await response.json()
-                setPlatformImage(data.imageUrl)
-                return data.imageUrl
-            }
-        } catch (error) {
-            console.error('Error fetching platform image:', error)
-            setPlatformImage(null)
-        }        return null
+        }        return []
     }, [])
 
     const selectPlatform = useCallback(async (platform: IgdbPlatform) => {
         setSelectedPlatform(platform)
         setSelectedVersion(null)
-        setPlatformImage(null)
+
+        console.log('selectPlatform called with:', platform)
 
         if (platform.hasVersions) {
             await fetchPlatformVersions(platform)
             return { hasVersions: true }
         } else {
-            if (platform.platform_logo) {
-                await fetchPlatformImage(platform.platform_logo)
-            }
+            // Image data is already in the platform object
+            console.log('Platform imageUrl:', platform.imageUrl)
             return { hasVersions: false }
         }
-    }, [fetchPlatformVersions, fetchPlatformImage])
+    }, [fetchPlatformVersions])
 
     const selectVersion = useCallback(async (version: IgdbPlatformVersion) => {
         setSelectedVersion(version)
-        setPlatformImage(null)
-
-        if (version.platform_logo) {
-            await fetchPlatformImage(version.platform_logo)
-        }
-    }, [fetchPlatformImage])
+        console.log('selectVersion called with:', version)
+        console.log('Version imageUrl:', version.imageUrl)
+    }, [])
 
     const clearSelection = useCallback(() => {
         setSelectedPlatform(null)
         setSelectedVersion(null)
-        setPlatformImage(null)
         setPlatformVersions([])
     }, [])
 
@@ -154,7 +135,6 @@ export function usePlatformManagement() {
         platformVersions,
         selectedPlatform,
         selectedVersion,
-        platformImage,
         loading,
         notification,
         

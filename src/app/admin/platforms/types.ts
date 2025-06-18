@@ -20,6 +20,7 @@ export interface IgdbPlatform {
     // Resolved data from relationships
     familyName?: string
     typeName?: string
+    imageUrl?: string // Added image URL from local cache
 }
 
 export interface IgdbPlatformVersion {
@@ -41,6 +42,7 @@ export interface IgdbPlatformVersion {
     resolutions?: string
     output?: string
     companies?: string
+    imageUrl?: string // Added image URL from local cache
 }
 
 export interface IgdbPlatformFamily {
