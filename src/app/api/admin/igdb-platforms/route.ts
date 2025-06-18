@@ -1,71 +1,51 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 
-const IGDB_CLIENT_ID = process.env.IGDB_CLIENT_ID
-const IGDB_CLIENT_SECRET = process.env.IGDB_CLIENT_SECRET
-
-async function getIGDBAccessToken() {
-  const res = await fetch(`https://id.twitch.tv/oauth2/token?client_id=${IGDB_CLIENT_ID}&client_secret=${IGDB_CLIENT_SECRET}&grant_type=client_credentials`, {
-    method: 'POST',
-  })
-  const data = await res.json()
-  return data.access_token
-}
-
-export async function GET() {
-  if (!IGDB_CLIENT_ID || !IGDB_CLIENT_SECRET) {
-    return NextResponse.json({ error: 'IGDB credentials not set' }, { status: 500 })
-  }
-
-  try {
-    const accessToken = await getIGDBAccessToken()
-    
-    // Fetch platforms with platform_logo field
-    const res = await fetch('https://api.igdb.com/v4/platforms', {
-      method: 'POST',
-      headers: {
-        'Client-ID': IGDB_CLIENT_ID,
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
+export async function GET(request: Request) {
+  try {    
+    // Fetch platforms from local database with version count
+    const platforms = await prisma.igdbPlatform.findMany({
+      select: {
+        igdbId: true, // Primary key - no more local 'id'
+        name: true,
+        abbreviation: true,
+        alternative_name: true,
+        slug: true,
+        generation: true,
+        platform_logo: true,
+        summary: true,
+        versions: true,
+        platform_family: true,
+        category: true,
       },
-      body: 'fields id,name,summary,platform_logo; where category = (1,5,6); limit 50; sort name asc;',
+      orderBy: {
+        name: 'asc'
+      }
     })
-    
-    const platforms = await res.json()
-    
-    // Get all unique logo ids
-    const logoIds = platforms
-      .map((p: any) => p.platform_logo)
-      .filter((id: any) => !!id)
-    
-    if (logoIds.length === 0) {
-      return NextResponse.json(platforms.map((p: any) => ({ ...p, logoUrl: undefined })))
-    }
-    
-    // Fetch logo urls
-    const logoRes = await fetch('https://api.igdb.com/v4/platform_logos', {
-      method: 'POST',
-      headers: {
-        'Client-ID': IGDB_CLIENT_ID,
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-      },
-      body: `fields id,url; where id = (${logoIds.join(',')}); limit 100;`,
-    })
-    
-    const logos = await logoRes.json()
-    const logoMap = Object.fromEntries(logos.map((l: any) => [l.id, l.url]))
-    
-    // Attach logo url to each platform
-    const withLogos = platforms.map((p: any) => ({
-      ...p,
-      logoUrl: p.platform_logo ? logoMap[p.platform_logo] : undefined
+
+    // Get all platform families and types for lookups
+    const [platformFamilies, platformTypes] = await Promise.all([
+      prisma.igdbPlatformFamily.findMany(),
+      prisma.igdbPlatformType.findMany()
+    ])
+
+    // Create lookup maps
+    const familyMap = new Map(platformFamilies.map(f => [f.igdbId, f.name]))
+    const typeMap = new Map(platformTypes.map(t => [t.igdbId, t.name]))
+
+    // Add hasVersions flag and resolve family/type names
+    const platformsWithVersionInfo = platforms.map(platform => ({
+      ...platform,
+      hasVersions: platform.versions ? JSON.parse(platform.versions).length > 0 : false,
+      familyName: platform.platform_family ? familyMap.get(platform.platform_family) : undefined,
+      typeName: platform.category ? typeMap.get(platform.category) : undefined,
     }))
     
-    return NextResponse.json(withLogos)
+    return NextResponse.json(platformsWithVersionInfo)
   } catch (error) {
-    console.error('Error fetching IGDB platforms:', error)
+    console.error('Error fetching platforms:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch IGDB platforms' },
+      { error: 'Failed to fetch platforms from local database' },
       { status: 500 }
     )
   }

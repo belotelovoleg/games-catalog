@@ -23,13 +23,27 @@ model User {
 }
 
 model Platform {
-  id          Int      @id @default(autoincrement())
-  name        String
-  imageUrl    String?  // Platform logo/image from IGDB
-  description String?
-  igdbId      Int?     @unique // IGDB platform ID for matching
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                     Int      @id @default(autoincrement()) // Our local ID
+  
+  // IGDB references - can be empty for manual platforms
+  igdbPlatformId         Int?     // IGDB platform ID
+  igdbPlatformVersionId  Int?     // IGDB platform version ID
+  
+  // Platform fields (from IgdbPlatform) - can override IGDB values if filled
+  abbreviation           String?  // Platform abbreviation
+  alternative_name       String?  // Alternative platform name
+  generation             Int?     // Platform generation
+  name                   String   // Platform name (required)
+  platform_family        Int?     // IGDB Platform Family ID
+  platform_type          Int?     // IGDB Platform Type ID
+  
+  // Platform version fields (from IgdbPlatformVersion) - can override IGDB values if filled
+  companies              String?  // Array of company IDs (stored as JSON string)
+  versionName            String?  // Platform version name (if different from main name)
+  platform_logo_base64   String?  // Base64 encoded logo to avoid API calls
+  
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   // Relations
   userPlatforms UserPlatform[]
@@ -73,6 +87,95 @@ model UserGame {
   platform Platform @relation(fields: [platformId], references: [id])
 
   @@unique([userId, platformId, igdbId, status]) // Prevent exact duplicates
+}
+
+model IgdbPlatformVersion {
+  // IGDB platform_version data - using IGDB ID as primary key
+  igdbId                          Int      @id // IGDB platform_version ID (id field) - PRIMARY KEY
+  checksum                        String?  // Hash of the object
+  companies                       String?  // Array of Platform Version Company IDs (stored as JSON string)
+  connectivity                    String?  // The network capabilities
+  cpu                            String?  // The integrated control processing unit
+  graphics                       String?  // The graphics chipset
+  main_manufacturer              Int?     // Reference ID for Platform Version Company
+  media                          String?  // The type of media this version accepted
+  memory                         String?  // How much memory there is
+  name                           String   // The name of the platform version
+  os                             String?  // The operating system installed on the platform version
+  output                         String?  // The output video rate
+  platform_logo                  Int?     // Reference ID for Platform Logo
+  platform_version_release_dates String?  // Array of Platform Version Release Date IDs (stored as JSON string)
+  resolutions                    String?  // The maximum resolution
+  slug                           String?  // A url-safe, unique, lower-case version of the name
+  sound                          String?  // The sound chipset
+  storage                        String?  // How much storage there is
+  summary                        String?  // A short summary
+  url                            String?  // The website address (URL) of the item
+  
+  // Local metadata only
+  lastSynced     DateTime @default(now())
+  localCreatedAt DateTime @default(now())
+  localUpdatedAt DateTime @updatedAt
+}
+
+model IgdbPlatform {
+  // IGDB platform data - using IGDB ID as primary key
+  igdbId           Int      @id // IGDB platform ID (id field) - PRIMARY KEY
+  abbreviation     String?  // An abbreviation of the platform name
+  alternative_name String?  // An alternative name for the platform
+  category         Int?     // Category Enum (DEPRECATED! Use platform_type instead)
+  checksum         String?  // Hash of the object
+  created_at       DateTime? // Date this was initially added to the IGDB database
+  generation       Int?     // The generation of the platform
+  name             String   // The name of the platform
+  platform_family  Int?     // Reference ID for Platform Family
+  platform_logo    Int?     // Reference ID for Platform Logo
+  platform_type    Int?     // Reference ID for Platform Type
+  slug             String?  // A url-safe, unique, lower-case version of the name
+  summary          String?  // The summary of the first Version of this platform
+  updated_at       DateTime? // The last date this entry was updated in the IGDB database
+  url              String?  // The website address (URL) of the item
+  versions         String?  // Array of Platform Version IDs (stored as JSON string)
+  websites         String?  // Array of Platform Website IDs (stored as JSON string)
+  
+  // Local metadata only
+  lastSynced  DateTime @default(now())
+  localCreatedAt   DateTime @default(now())
+  localUpdatedAt   DateTime @updatedAt
+}
+
+model IgdbCompany {
+  // IGDB company data - minimal data for company name resolution
+  igdbId   Int    @id // IGDB company ID (id field) - PRIMARY KEY
+  name     String // The name of the company
+}
+
+model IgdbPlatformFamily {
+  // IGDB platform family data - minimal data for family name resolution
+  igdbId   Int    @id // IGDB platform family ID (id field) - PRIMARY KEY
+  name     String // The name of the platform family
+  slug     String // A url-safe, unique, lower-case version of the name
+}
+
+model IgdbPlatformType {
+  // IGDB platform type data - minimal data for type name resolution
+  igdbId   Int    @id // IGDB platform type ID (id field) - PRIMARY KEY
+  name     String // The name of the platform type
+}
+
+model IgdbImage {
+  // IGDB image data - stores all image metadata for efficient lookups
+  igdbId        Int     @id // IGDB image ID (id field) - PRIMARY KEY
+  alpha_channel Boolean? // Whether the image has alpha channel
+  animated      Boolean? // Whether the image is animated
+  checksum      String? // Hash of the object
+  height        Int?    // The height of the image in pixels
+  image_id      String? // The ID of the image used to construct an IGDB image link
+  url           String? // The website address (URL) of the item
+  width         Int?    // The width of the image in pixels
+  
+  // Computed field for direct image access
+  computed_url  String? // Pre-computed IGDB image URL for different sizes
 }
 
 enum PlatformStatus {

@@ -53,10 +53,18 @@ export async function POST(req: Request) {
   const user = await verifyAdmin(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
-    const { name, description, imageUrl, igdbId } = await req.json()
+  }  try {
+    const { 
+      name, 
+      igdbPlatformId,
+      igdbPlatformVersionId,
+      abbreviation,
+      alternative_name,
+      generation,
+      companies,
+      versionName,
+      platform_logo_base64
+    } = await req.json()
 
     if (!name) {
       return NextResponse.json(
@@ -68,9 +76,14 @@ export async function POST(req: Request) {
     const platform = await prisma.platform.create({
       data: {
         name,
-        description,
-        imageUrl,
-        igdbId
+        igdbPlatformId,
+        igdbPlatformVersionId,
+        abbreviation,
+        alternative_name,
+        generation,
+        companies,
+        versionName,
+        platform_logo_base64
       }
     })
 
