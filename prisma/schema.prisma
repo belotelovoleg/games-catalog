@@ -16,10 +16,6 @@ model User {
   isAdmin     Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  // User's platform and game collections
-  userPlatforms UserPlatform[]
-  gameCollection UserGame[]
 }
 
 model Platform {
@@ -44,10 +40,6 @@ model Platform {
   
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
-
-  // Relations
-  userPlatforms UserPlatform[]
-  games         UserGame[]
 }
 
 model UserPlatform {
@@ -57,9 +49,6 @@ model UserPlatform {
   status     PlatformStatus // OWNED or WISHLISTED
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-
-  user     User     @relation(fields: [userId], references: [id])
-  platform Platform @relation(fields: [platformId], references: [id])
 
   @@unique([userId, platformId, status]) // Prevent duplicates
 }
@@ -82,9 +71,6 @@ model UserGame {
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  user     User     @relation(fields: [userId], references: [id])
-  platform Platform @relation(fields: [platformId], references: [id])
 
   @@unique([userId, platformId, igdbId, status]) // Prevent exact duplicates
 }
@@ -139,7 +125,7 @@ model IgdbPlatform {
   websites         String?  // Array of Platform Website IDs (stored as JSON string)
   
   // Local metadata only
-  lastSynced  DateTime @default(now())
+  lastSynced       DateTime @default(now())
   localCreatedAt   DateTime @default(now())
   localUpdatedAt   DateTime @updatedAt
 }
@@ -163,19 +149,19 @@ model IgdbPlatformType {
   name     String // The name of the platform type
 }
 
-model IgdbImage {
-  // IGDB image data - stores all image metadata for efficient lookups
-  igdbId        Int     @id // IGDB image ID (id field) - PRIMARY KEY
-  alpha_channel Boolean? // Whether the image has alpha channel
-  animated      Boolean? // Whether the image is animated
+model IgdbPlatformLogo {
+  // IGDB platform logo data - stores logo metadata from /platform_logos endpoint
+  igdbId        Int     @id // IGDB platform logo ID (id field) - PRIMARY KEY
+  alpha_channel Boolean? // Whether the logo has alpha channel
+  animated      Boolean? // Whether the logo is animated
   checksum      String? // Hash of the object
-  height        Int?    // The height of the image in pixels
-  image_id      String? // The ID of the image used to construct an IGDB image link
+  height        Int?    // The height of the logo in pixels
+  image_id      String? // The ID used to construct IGDB logo URLs (e.g., "plnf")
   url           String? // The website address (URL) of the item
-  width         Int?    // The width of the image in pixels
+  width         Int?    // The width of the logo in pixels
   
-  // Computed field for direct image access
-  computed_url  String? // Pre-computed IGDB image URL for different sizes
+  // Computed field for direct logo access
+  computed_url  String? // Pre-computed IGDB logo URL (e.g., "https://images.igdb.com/igdb/image/upload/t_logo_med/plnf.png")
 }
 
 enum PlatformStatus {

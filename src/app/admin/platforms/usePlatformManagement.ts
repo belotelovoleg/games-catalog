@@ -52,7 +52,7 @@ export function usePlatformManagement() {
                 return []
             }
             
-            const response = await fetch(`/api/admin/platform-versions?versionIds=${encodeURIComponent(JSON.stringify(versionIds))}`)
+            const response = await fetch(`/api/admin/igdb-platform-versions?versionIds=${encodeURIComponent(JSON.stringify(versionIds))}`)
             if (response.ok) {
                 const data = await response.json()
                 setPlatformVersions(data)

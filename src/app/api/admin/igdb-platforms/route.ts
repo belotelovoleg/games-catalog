@@ -22,56 +22,37 @@ export async function GET(request: Request) {
       return NextResponse.json(platform)
     }
     
-    // Fetch all platforms from local database with version count
-    const platforms = await prisma.igdbPlatform.findMany({
-      select: {
-        igdbId: true, // Primary key - no more local 'id'
-        name: true,
-        abbreviation: true,
-        alternative_name: true,
-        slug: true,
-        generation: true,
-        platform_logo: true,
-        summary: true,
-        versions: true,
-        platform_family: true,
-        category: true,
-      },
-      orderBy: {
-        name: 'asc'
-      }
-    })
-
-    // Get all platform families and types for lookups
-    const [platformFamilies, platformTypes] = await Promise.all([
-      prisma.igdbPlatformFamily.findMany(),
-      prisma.igdbPlatformType.findMany()
+    // Fetch all platforms and related data in parallel for efficiency
+    const [platforms, allLogos, allFamilies, allTypes] = await Promise.all([
+      prisma.igdbPlatform.findMany({
+        orderBy: { name: 'asc' }
+      }),
+      prisma.igdbPlatformLogo.findMany({
+        select: { igdbId: true, computed_url: true }
+      }),
+      prisma.igdbPlatformFamily.findMany({
+        select: { igdbId: true, name: true }
+      }),
+      prisma.igdbPlatformType.findMany({
+        select: { igdbId: true, name: true }
+      })
     ])
 
-    // Create lookup maps
-    const familyMap = new Map(platformFamilies.map(f => [f.igdbId, f.name]))
-    const typeMap = new Map(platformTypes.map(t => [t.igdbId, t.name]))    // Add hasVersions flag and resolve family/type names
-    const platformsWithVersionInfo = await Promise.all(
-      platforms.map(async (platform) => {
-        let imageUrl = null
-        if (platform.platform_logo) {
-          const image = await prisma.igdbImage.findUnique({
-            where: { igdbId: platform.platform_logo }
-          })
-          imageUrl = image?.computed_url || null
-        }
-        
-        return {
-          ...platform,
-          hasVersions: platform.versions ? JSON.parse(platform.versions).length > 0 : false,
-          familyName: platform.platform_family ? familyMap.get(platform.platform_family) : undefined,
-          typeName: platform.category ? typeMap.get(platform.category) : undefined,
-          imageUrl
-        }
-      })
-    )
+    // Create lookup maps for O(1) access
+    const logoMap = new Map(allLogos.map(logo => [logo.igdbId, logo.computed_url]))
+    const familyMap = new Map(allFamilies.map(family => [family.igdbId, family.name]))
+    const typeMap = new Map(allTypes.map(type => [type.igdbId, type.name]))
+
+    // Transform platforms with all joined data
+    const platformsWithAllData = platforms.map(platform => ({
+      ...platform,
+      hasVersions: platform.versions ? JSON.parse(platform.versions).length > 0 : false,
+      imageUrl: platform.platform_logo ? logoMap.get(platform.platform_logo) || null : null,
+      familyName: platform.platform_family ? familyMap.get(platform.platform_family) || null : null,
+      typeName: platform.category ? typeMap.get(platform.category) || null : null
+    }))
     
-    return NextResponse.json(platformsWithVersionInfo)
+    return NextResponse.json(platformsWithAllData)
   } catch (error) {
     console.error('Error fetching platforms:', error)
     return NextResponse.json(

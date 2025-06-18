@@ -87,25 +87,25 @@ export async function POST(req: NextRequest) {
     // Determine the platform name (version name takes precedence, then custom name, then platform name)
     const platformName = customName || 
                         (igdbPlatformVersion?.name) || 
-                        igdbPlatform.name
-
-    // Handle base64 logo if requested
+                        igdbPlatform.name    // Handle base64 logo if requested
     let platform_logo_base64 = null
     if (includeBase64Logo) {
       const logoId = igdbPlatformVersion?.platform_logo || igdbPlatform.platform_logo
       if (logoId) {
-        try {          // Fetch logo from our local igdb-images API
-          const logoResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/admin/igdb-images?logoId=${logoId}`)
-          if (logoResponse.ok) {
-            const logoData = await logoResponse.json()
-            if (logoData.imageUrl) {
-              // Fetch the actual image and convert to base64
-              const imageResponse = await fetch(logoData.imageUrl)
-              if (imageResponse.ok) {
-                const imageBuffer = await imageResponse.arrayBuffer()
-                const base64String = Buffer.from(imageBuffer).toString('base64')
-                platform_logo_base64 = `data:image/png;base64,${base64String}`
-              }
+        try {
+          // Get the logo URL directly from our logo cache
+          const logoData = await prisma.igdbPlatformLogo.findUnique({
+            where: { igdbId: logoId },
+            select: { computed_url: true }
+          })
+          
+          if (logoData?.computed_url) {
+            // Fetch the actual image and convert to base64
+            const imageResponse = await fetch(logoData.computed_url)
+            if (imageResponse.ok) {
+              const imageBuffer = await imageResponse.arrayBuffer()
+              const base64String = Buffer.from(imageBuffer).toString('base64')
+              platform_logo_base64 = `data:image/png;base64,${base64String}`
             }
           }
         } catch (error) {

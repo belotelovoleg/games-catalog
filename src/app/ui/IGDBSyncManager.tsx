@@ -46,7 +46,7 @@ export default function IGDBSyncManager() {
     setNotification({ open: true, title, message, severity, details })
   }
   
-  const handleSync = async (type: 'platforms' | 'platform-versions' | 'companies' | 'platform-families' | 'platform-types' | 'igdb-images') => {
+  const handleSync = async (type: 'platforms' | 'platform-versions' | 'companies' | 'platform-families' | 'platform-types' | 'platform-logos') => {
     const loadingKey = `sync-${type}`
     setLoadingStates(prev => ({ ...prev, [loadingKey]: true }))
 
@@ -62,7 +62,7 @@ export default function IGDBSyncManager() {
                          type === 'companies' ? 'Companies' :
                          type === 'platform-families' ? 'Platform Families' :
                          type === 'platform-types' ? 'Platform Types' :
-                         type === 'igdb-images' ? 'IGDB Images' : type
+                         type === 'platform-logos' ? 'Platform Logos' : type
         
         // Create detailed success message
         const title = `✅ ${typeLabel} Sync Completed!`
@@ -81,7 +81,7 @@ export default function IGDBSyncManager() {
                          type === 'companies' ? 'Companies' :
                          type === 'platform-families' ? 'Platform Families' :
                          type === 'platform-types' ? 'Platform Types' :
-                         type === 'igdb-images' ? 'IGDB Images' : type
+                         type === 'platform-logos' ? 'Platform Logos' : type
         showNotification(
           `❌ ${typeLabel} Sync Failed`, 
           error.error || 'Unknown error occurred',
@@ -93,7 +93,7 @@ export default function IGDBSyncManager() {
                        type === 'companies' ? 'Companies' :
                        type === 'platform-families' ? 'Platform Families' :
                        type === 'platform-types' ? 'Platform Types' :
-                       type === 'igdb-images' ? 'IGDB Images' : type
+                       type === 'platform-logos' ? 'Platform Logos' : type
       console.error(`${type} sync error:`, error)
       showNotification(
         `❌ ${typeLabel} Sync Failed`, 
@@ -171,17 +171,15 @@ export default function IGDBSyncManager() {
               sx={{ minWidth: 200 }}
             >
               {loadingStates['sync-platform-types'] ? 'Syncing Types...' : 'Sync Platform Types'}
-            </Button>
-
-            <Button
+            </Button>            <Button
               variant="outlined"
               color="secondary"
-              startIcon={loadingStates['sync-igdb-images'] ? <CircularProgress size={20} /> : <Image />}
-              onClick={() => handleSync('igdb-images')}
-              disabled={loadingStates['sync-igdb-images']}
+              startIcon={loadingStates['sync-platform-logos'] ? <CircularProgress size={20} /> : <Image />}
+              onClick={() => handleSync('platform-logos')}
+              disabled={loadingStates['sync-platform-logos']}
               sx={{ minWidth: 200 }}
             >
-              {loadingStates['sync-igdb-images'] ? 'Syncing Images...' : 'Sync IGDB Images'}
+              {loadingStates['sync-platform-logos'] ? 'Syncing Logos...' : 'Sync Platform Logos'}
             </Button>
           </Stack>
         </Stack>        <Divider sx={{ my: 2 }} />

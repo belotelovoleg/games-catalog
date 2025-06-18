@@ -43,6 +43,8 @@ export interface IgdbPlatformVersion {
     output?: string
     companies?: string
     imageUrl?: string // Added image URL from local cache
+    companyNames?: string[] // Company names resolved from company IDs
+    mainManufacturerName?: string // Main manufacturer company name
 }
 
 export interface IgdbPlatformFamily {

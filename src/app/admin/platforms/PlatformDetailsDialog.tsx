@@ -14,11 +14,6 @@ import {
 import { IgdbPlatform, IgdbPlatformVersion } from './types'
 import { useState, useEffect } from 'react'
 
-interface Company {
-    igdbId: number
-    name: string
-}
-
 interface PlatformDetailsDialogProps {
     open: boolean
     platform: IgdbPlatform | null
@@ -34,98 +29,43 @@ export default function PlatformDetailsDialog({
     onClose, 
     onAddPlatform 
 }: PlatformDetailsDialogProps) {    const displayName = version?.name || platform?.name
-    const [companies, setCompanies] = useState<Record<number, Company>>({})
-    const [loadingCompanies, setLoadingCompanies] = useState(false)
-      // Use image from version first, then platform
-    const imageUrl = version?.imageUrl || platform?.imageUrl
     
+    // Use image from version first, then platform
+    const imageUrl = version?.imageUrl || platform?.imageUrl
+      // Debug logging - only when dialog is open and has data
     useEffect(() => {
-        if (version && open) {
-            setLoadingCompanies(true)
-            
-            try {
-                let companyIds: number[] = []
-                
-                // Get company IDs from companies array
-                if (version.companies) {
-                    const parsedCompanies = JSON.parse(version.companies) as number[]
-                    companyIds.push(...parsedCompanies)
-                }
-                
-                // Add main manufacturer ID if available
-                if (version.main_manufacturer) {
-                    companyIds.push(version.main_manufacturer)
-                }
-                
-                // Remove duplicates
-                companyIds = [...new Set(companyIds)]
-                
-                if (companyIds.length > 0) {
-                    fetch(`/api/admin/companies?ids=${companyIds.join(',')}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                setCompanies(data.companies)
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching companies:', error)
-                        })
-                        .finally(() => {
-                            setLoadingCompanies(false)
-                        })
-                } else {
-                    setLoadingCompanies(false)
-                }
-            } catch (error) {
-                console.error('Error parsing companies JSON:', error)
-                setLoadingCompanies(false)
-            }
-        } else {
-            setCompanies({})
-            setLoadingCompanies(false)
+        if (open && (platform || version)) {
+            console.log('=== PlatformDetailsDialog Debug ===')
+            console.log('version object:', version)
+            console.log('version?.imageUrl:', version?.imageUrl)
+            console.log('platform object:', platform)
+            console.log('platform?.imageUrl:', platform?.imageUrl)
+            console.log('version keys:', version ? Object.keys(version) : 'null')
+            console.log('platform keys:', platform ? Object.keys(platform) : 'null')
+            console.log('Final imageUrl:', imageUrl)
+            console.log('=================================')
         }
-    }, [version?.companies, version?.main_manufacturer, open])    // Function to render companies (excluding main manufacturer)
-    const renderCompanies = () => {
-        if (!version?.companies) return null
-        
-        try {
-            const companyIds = JSON.parse(version.companies) as number[]
-            // Filter out main manufacturer to avoid duplication
-            const filteredCompanyIds = companyIds.filter(id => id !== version.main_manufacturer)
-            
-            if (filteredCompanyIds.length === 0) return null
+    }, [open, platform, version, imageUrl])
 
-            return (
-                <Box>
-                    <Typography variant="subtitle2" color="primary">Other Companies</Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                        {loadingCompanies ? (
-                            <Typography variant="body2" color="text.secondary">Loading companies...</Typography>
-                        ) : (
-                            filteredCompanyIds.map(id => {
-                                const company = companies[id]
-                                return (
-                                    <Chip
-                                        key={id}
-                                        label={company ? company.name : `Company ID: ${id}`}
-                                        variant={company ? "filled" : "outlined"}
-                                        size="small"
-                                    />
-                                )
-                            })
-                        )}
-                    </Box>
+    // Function to render companies (excluding main manufacturer)
+    const renderCompanies = () => {
+        if (!version?.companyNames || version.companyNames.length === 0) return null
+
+        return (
+            <Box>
+                <Typography variant="subtitle2" color="primary">Other Companies</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                    {version.companyNames.map((companyName, index) => (
+                        <Chip
+                            key={index}
+                            label={companyName}
+                            variant="filled"
+                            size="small"
+                        />
+                    ))}
                 </Box>
-            )
-        } catch (error) {
-            return (
-                <Box>
-                    <Typography variant="subtitle2" color="primary">Companies</Typography>
-                    <Typography variant="body2" color="error">Error parsing company data</Typography>
-                </Box>
-            )
-        }
+            </Box>
+        )
     }
 
     return (
@@ -190,21 +130,15 @@ export default function PlatformDetailsDialog({
                                         <Typography variant="subtitle2" color="primary">Summary</Typography>
                                         <Typography variant="body2">{version.summary}</Typography>
                                     </Box>
-                                )}
-                                
-                                {version.main_manufacturer && (
+                                )}                                {version.main_manufacturer && (
                                     <Box>
                                         <Typography variant="subtitle2" color="primary">Main Manufacturer</Typography>
-                                        {loadingCompanies ? (
-                                            <Typography variant="body2" color="text.secondary">Loading...</Typography>
-                                        ) : (
-                                            <Chip
-                                                label={companies[version.main_manufacturer]?.name || `Company ID: ${version.main_manufacturer}`}
-                                                variant="filled"
-                                                size="small"
-                                                color="primary"
-                                            />
-                                        )}
+                                        <Chip
+                                            label={version.mainManufacturerName || `Company ID: ${version.main_manufacturer}`}
+                                            variant="filled"
+                                            size="small"
+                                            color="primary"
+                                        />
                                     </Box>
                                 )}
                                 
