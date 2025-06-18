@@ -57,43 +57,35 @@ export function usePlatformManagement() {
                 const data = await response.json()
                 setPlatformVersions(data)
                 return data
-            }
-        } catch (error) {
+            }        } catch (error) {
             console.error('Error fetching platform versions:', error)
-        }        return []
+        }
+        return []
     }, [])
 
     const selectPlatform = useCallback(async (platform: IgdbPlatform) => {
         setSelectedPlatform(platform)
         setSelectedVersion(null)
 
-        console.log('selectPlatform called with:', platform)
-
         if (platform.hasVersions) {
             await fetchPlatformVersions(platform)
             return { hasVersions: true }
         } else {
-            // Image data is already in the platform object
-            console.log('Platform imageUrl:', platform.imageUrl)
-            return { hasVersions: false }
+            // Image data is already in the platform object            return { hasVersions: false }
         }
     }, [fetchPlatformVersions])
 
     const selectVersion = useCallback(async (version: IgdbPlatformVersion) => {
         setSelectedVersion(version)
-        console.log('selectVersion called with:', version)
-        console.log('Version imageUrl:', version.imageUrl)
     }, [])
 
-    const clearSelection = useCallback(() => {
-        setSelectedPlatform(null)
+    const clearSelection = useCallback(() => {        setSelectedPlatform(null)
         setSelectedVersion(null)
         setPlatformVersions([])
     }, [])
 
     const addSelectedPlatform = useCallback(async () => {
         if (!selectedPlatform) {
-            console.error('No platform selected')
             return
         }
 
@@ -116,15 +108,11 @@ export function usePlatformManagement() {
             const result = await response.json()
 
             if (response.ok) {
-                console.log('Platform added successfully:', result.platform)
                 clearSelection()
                 showNotification(`Platform "${result.platform.name}" added successfully!`, 'success')
             } else {
-                console.error('Failed to add platform:', result.error)
                 showNotification(`Failed to add platform: ${result.error}`, 'error')
-            }
-        } catch (error) {
-            console.error('Error adding platform:', error)
+            }        } catch (error) {
             showNotification('An error occurred while adding the platform', 'error')
         }
     }, [selectedVersion, selectedPlatform, clearSelection, showNotification])

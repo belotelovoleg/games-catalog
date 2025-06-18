@@ -5,13 +5,29 @@ import jwt from 'jsonwebtoken'
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key'
 
 async function verifyAdmin(req: Request) {
-  const authHeader = req.headers.get('authorization') || req.headers.get('cookie')
   let token = null
   
+  // Check Authorization header first (Bearer token)
+  const authHeader = req.headers.get('authorization')
   if (authHeader?.startsWith('Bearer ')) {
     token = authHeader.substring(7)
-  } else if (authHeader?.includes('token=')) {
-    token = authHeader.split('token=')[1].split(';')[0]
+  }
+  
+  // If no Bearer token, check cookies
+  if (!token) {
+    const cookieHeader = req.headers.get('cookie')
+    if (cookieHeader) {
+      // Parse cookies properly: "token=abc123; other=value"
+      const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=')
+        if (key && value) {
+          acc[key] = value
+        }
+        return acc
+      }, {} as Record<string, string>)
+      
+      token = cookies.token
+    }
   }
 
   if (!token) {
@@ -130,15 +146,9 @@ export async function DELETE(
     const platformId = parseInt(params.id)
     if (isNaN(platformId)) {
       return NextResponse.json({ error: 'Invalid platform ID' }, { status: 400 })
-    }
-
-    // Check if platform exists
+    }    // Check if platform exists
     const existingPlatform = await prisma.platform.findUnique({
-      where: { id: platformId },
-      include: {
-        userPlatforms: true,
-        games: true
-      }
+      where: { id: platformId }
     })
 
     if (!existingPlatform) {
@@ -146,7 +156,15 @@ export async function DELETE(
     }
 
     // Check if platform is being used by users
-    if (existingPlatform.userPlatforms.length > 0 || existingPlatform.games.length > 0) {
+    const userPlatforms = await prisma.userPlatform.findMany({
+      where: { platformId: platformId }
+    })
+
+    const userGames = await prisma.userGame.findMany({
+      where: { platformId: platformId }
+    })
+
+    if (userPlatforms.length > 0 || userGames.length > 0) {
       return NextResponse.json(
         { 
           error: 'Cannot delete platform that is being used by users or has associated games' 

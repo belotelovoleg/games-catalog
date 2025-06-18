@@ -346,7 +346,8 @@ export default function PlatformListPage() {
                                         <Typography variant="caption">
                                             {new Date(platform.createdAt).toLocaleDateString()}
                                         </Typography>
-                                    </TableCell>                                    <TableCell align="right">
+                                    </TableCell>
+                                    <TableCell align="right">
                                         <IconButton
                                             size="small"
                                             onClick={() => handleViewDetails(platform)}

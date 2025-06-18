@@ -5,13 +5,29 @@ import jwt from 'jsonwebtoken'
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key'
 
 async function verifyAdmin(req: Request) {
-  const authHeader = req.headers.get('authorization') || req.headers.get('cookie')
   let token = null
   
+  // Check Authorization header first (Bearer token)
+  const authHeader = req.headers.get('authorization')
   if (authHeader?.startsWith('Bearer ')) {
     token = authHeader.substring(7)
-  } else if (authHeader?.includes('token=')) {
-    token = authHeader.split('token=')[1].split(';')[0]
+  }
+  
+  // If no Bearer token, check cookies
+  if (!token) {
+    const cookieHeader = req.headers.get('cookie')
+    if (cookieHeader) {
+      // Parse cookies properly: "token=abc123; other=value"
+      const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=')
+        if (key && value) {
+          acc[key] = value
+        }
+        return acc
+      }, {} as Record<string, string>)
+      
+      token = cookies.token
+    }
   }
 
   if (!token) {
@@ -130,9 +146,7 @@ export async function POST(req: NextRequest) {
         { error: 'This platform/version combination already exists in your platforms list' },
         { status: 409 }
       )
-    }
-
-    // Create the platform
+    }    // Create the platform
     const platform = await prisma.platform.create({
       data: {
         name: platformName,
@@ -141,6 +155,8 @@ export async function POST(req: NextRequest) {
         abbreviation: igdbPlatform.abbreviation,
         alternative_name: igdbPlatform.alternative_name,
         generation: igdbPlatform.generation,
+        platform_family: igdbPlatform.platform_family,
+        platform_type: igdbPlatform.platform_type,
         companies: igdbPlatformVersion?.companies,
         versionName: igdbPlatformVersion?.name,
         platform_logo_base64: platform_logo_base64

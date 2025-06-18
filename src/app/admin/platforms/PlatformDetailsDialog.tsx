@@ -12,7 +12,7 @@ import {
     Chip
 } from '@mui/material'
 import { IgdbPlatform, IgdbPlatformVersion } from './types'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 interface PlatformDetailsDialogProps {
     open: boolean
@@ -28,24 +28,11 @@ export default function PlatformDetailsDialog({
     version, 
     onClose, 
     onAddPlatform 
-}: PlatformDetailsDialogProps) {    const displayName = version?.name || platform?.name
+}: PlatformDetailsDialogProps) {
+    const displayName = version?.name || platform?.name
     
     // Use image from version first, then platform
     const imageUrl = version?.imageUrl || platform?.imageUrl
-      // Debug logging - only when dialog is open and has data
-    useEffect(() => {
-        if (open && (platform || version)) {
-            console.log('=== PlatformDetailsDialog Debug ===')
-            console.log('version object:', version)
-            console.log('version?.imageUrl:', version?.imageUrl)
-            console.log('platform object:', platform)
-            console.log('platform?.imageUrl:', platform?.imageUrl)
-            console.log('version keys:', version ? Object.keys(version) : 'null')
-            console.log('platform keys:', platform ? Object.keys(platform) : 'null')
-            console.log('Final imageUrl:', imageUrl)
-            console.log('=================================')
-        }
-    }, [open, platform, version, imageUrl])
 
     // Function to render companies (excluding main manufacturer)
     const renderCompanies = () => {

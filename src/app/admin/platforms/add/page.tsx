@@ -20,7 +20,6 @@ import { jwtDecode } from 'jwt-decode'
 
 // Components
 import PlatformsTable from '../PlatformsTable'
-import AddPlatformDialog from '../AddPlatformDialog'
 import PlatformVersionsDialog from '../PlatformVersionsDialog'
 import PlatformDetailsDialog from '../PlatformDetailsDialog'
 
@@ -28,11 +27,9 @@ import PlatformDetailsDialog from '../PlatformDetailsDialog'
 import { DecodedToken } from '../types'
 import { usePlatformManagement } from '../usePlatformManagement'
 
-export default function AddPlatformPage() {
-    const [user, setUser] = useState<DecodedToken | null>(null)
+export default function AddPlatformPage() {    const [user, setUser] = useState<DecodedToken | null>(null)
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
-    const [showAddDialog, setShowAddDialog] = useState(false)
     const [showVersionsDialog, setShowVersionsDialog] = useState(false)
     const [showDetailsDialog, setShowDetailsDialog] = useState(false)
     const router = useRouter()    // Use our custom hook for platform management
@@ -78,22 +75,9 @@ export default function AddPlatformPage() {
             fetchPlatforms()
             setLoading(false)
         }
-    }, [user, fetchPlatforms])
-
-    // Handle platform selection from table
+    }, [user, fetchPlatforms])    // Handle platform selection from table
     const handlePlatformSelectFromTable = async (platform: any) => {
         const result = await selectPlatform(platform)
-        if (result?.hasVersions) {
-            setShowVersionsDialog(true)
-        } else {
-            setShowDetailsDialog(true)
-        }
-    }
-
-    // Handle platform selection from dialog
-    const handlePlatformSelectFromDialog = async (platform: any) => {
-        const result = await selectPlatform(platform)
-        setShowAddDialog(false)
         if (result?.hasVersions) {
             setShowVersionsDialog(true)
         } else {
@@ -112,13 +96,7 @@ export default function AddPlatformPage() {
     const handleAddSelectedPlatform = async () => {
         await addSelectedPlatform()
         setShowDetailsDialog(false)
-    }
-
-    // Dialog close handlers
-    const handleCloseAdd = () => {
-        setShowAddDialog(false)
-    }
-
+    }    // Dialog close handlers
     const handleCloseVersions = () => {
         setShowVersionsDialog(false)
         clearSelection()
@@ -140,8 +118,7 @@ export default function AddPlatformPage() {
     }
 
     return (
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-            {/* Header */}
+        <Container maxWidth="lg" sx={{ py: 4 }}>            {/* Header */}
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Box display="flex" alignItems="center" gap={2}>
                     <Button
@@ -155,12 +132,6 @@ export default function AddPlatformPage() {
                         Add Platform
                     </Typography>
                 </Box>
-                <Button
-                    variant="outlined"
-                    onClick={() => setShowAddDialog(true)}
-                >
-                    Search Platforms
-                </Button>
             </Box>
 
             {/* Instruction */}
@@ -185,17 +156,7 @@ export default function AddPlatformPage() {
                         <CircularProgress />
                     </Box>
                 )}
-            </Paper>
-
-            {/* Add Platform Dialog */}
-            <AddPlatformDialog
-                open={showAddDialog}
-                platforms={platforms}
-                onClose={handleCloseAdd}
-                onPlatformSelect={handlePlatformSelectFromDialog}
-            />
-
-            {/* Platform Versions Dialog */}
+            </Paper>            {/* Platform Versions Dialog */}
             <PlatformVersionsDialog
                 open={showVersionsDialog}
                 platform={selectedPlatform}
