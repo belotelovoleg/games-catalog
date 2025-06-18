@@ -61,7 +61,6 @@ export default function LeftMenu() {
   const [isOpen, setIsOpen] = useState(true)
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['catalog'])
   const [user, setUser] = useState<DecodedToken | null>(null)
-
   useEffect(() => {
     const token = Cookies.get('token')
     if (token) {
@@ -76,8 +75,34 @@ export default function LeftMenu() {
         console.error('Token validation error:', error)
         setUser(null)
       }
+    } else {
+      setUser(null)
     }
   }, [])
+
+  // Add an interval to periodically check for token changes
+  useEffect(() => {
+    const checkTokenPeriodically = setInterval(() => {
+      const currentToken = Cookies.get('token')
+      const hasToken = !!currentToken
+      const hasUser = !!user
+      
+      // If token state changed (logged in/out), update user state
+      if (hasToken && !hasUser) {
+        try {
+          const decoded = jwtDecode<DecodedToken>(currentToken)
+          setUser(decoded)
+        } catch (error) {
+          console.error('Token decode error:', error)
+          setUser(null)
+        }
+      } else if (!hasToken && hasUser) {
+        setUser(null)
+      }
+    }, 1000) // Check every second
+
+    return () => clearInterval(checkTokenPeriodically)
+  }, [user])
 
   const toggleMenu = () => {
     setIsOpen(!isOpen)
@@ -135,16 +160,13 @@ export default function LeftMenu() {
       if (item.adminOnly && (!user || !user.isAdmin)) return false
       return true
     })
-  }))
-
-  // Don't show menu if not logged in
+  }))  // Don't show menu if not logged in
   if (!user) {
     return null
   }
 
   return (
-    <>
-      {/* Toggle Button - Fixed position */}
+    <>      {/* Toggle Button - Fixed position */}
       <IconButton
         onClick={toggleMenu}
         sx={{
