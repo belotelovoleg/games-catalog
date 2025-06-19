@@ -7,15 +7,27 @@ export async function POST(request: NextRequest) {
     console.log('Starting IGDB platform logos sync...');
     
     // Get IGDB token
-    const token = await getIGDBAccessToken();
-
-    // Fetch ALL platform logos from IGDB
-    let allLogos: any[] = [];
+    const token = await getIGDBAccessToken();    // Fetch and save platform logos in batches
+    let totalNewCount = 0;
+    let totalUpdatedCount = 0;
+    let totalProcessed = 0;
     let offset = 0;
     const limit = 500;
     
     while (true) {
       console.log(`Fetching platform logos batch: offset ${offset}, limit ${limit}`);
+      
+      const requestBody = `fields alpha_channel,animated,checksum,height,image_id,url,width; limit ${limit}; offset ${offset}; sort id asc;`;
+      console.log('Sending request to IGDB platform_logos API:', {
+        url: 'https://api.igdb.com/v4/platform_logos',
+        method: 'POST',
+        headers: {
+          'Client-ID': process.env.IGDB_CLIENT_ID!,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: requestBody
+      });
       
       const response = await fetch('https://api.igdb.com/v4/platform_logos', {
         method: 'POST',
@@ -24,7 +36,7 @@ export async function POST(request: NextRequest) {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: `fields alpha_channel,animated,checksum,height,image_id,url,width; limit ${limit}; offset ${offset}; sort id asc;`,
+        body: requestBody,
       });
 
       if (!response.ok) {
@@ -37,8 +49,66 @@ export async function POST(request: NextRequest) {
         break; // No more data
       }
       
-      allLogos.push(...batch);
-      console.log(`Fetched ${batch.length} platform logos (total: ${allLogos.length})`);
+      console.log(`Fetched ${batch.length} platform logos, now saving batch to database...`);
+
+      // Process this batch immediately
+      let newCount = 0;
+      let updatedCount = 0;
+
+      for (const logo of batch) {
+        try {
+          // Compute the standard image URL if image_id exists
+          const computedUrl = logo.image_id ? 
+            `https://images.igdb.com/igdb/image/upload/t_logo_med/${logo.image_id}.png` : 
+            null;
+
+          const existingLogo = await prisma.igdbPlatformLogo.findUnique({
+            where: { igdbId: logo.id }
+          });
+
+          if (existingLogo) {
+            // Update existing logo
+            await prisma.igdbPlatformLogo.update({
+              where: { igdbId: logo.id },
+              data: {
+                alpha_channel: logo.alpha_channel,
+                animated: logo.animated,
+                checksum: logo.checksum,
+                height: logo.height,
+                image_id: logo.image_id,
+                url: logo.url,
+                width: logo.width,
+                computed_url: computedUrl
+              }
+            });
+            updatedCount++;
+          } else {
+            // Create new logo
+            await prisma.igdbPlatformLogo.create({
+              data: {
+                igdbId: logo.id,
+                alpha_channel: logo.alpha_channel,
+                animated: logo.animated,
+                checksum: logo.checksum,
+                height: logo.height,
+                image_id: logo.image_id,
+                url: logo.url,
+                width: logo.width,
+                computed_url: computedUrl
+              }
+            });
+            newCount++;
+          }
+        } catch (error) {
+          console.error(`Error syncing logo ${logo.id}:`, error);
+        }
+      }
+
+      totalNewCount += newCount;
+      totalUpdatedCount += updatedCount;
+      totalProcessed += batch.length;
+
+      console.log(`Batch saved: ${newCount} new, ${updatedCount} updated (Total processed: ${totalProcessed})`);
       
       if (batch.length < limit) {
         break; // Last batch
@@ -50,9 +120,7 @@ export async function POST(request: NextRequest) {
       await new Promise(resolve => setTimeout(resolve, 250));
     }
 
-    console.log(`Total platform logos fetched from IGDB: ${allLogos.length}`);
-
-    if (allLogos.length === 0) {
+    if (totalProcessed === 0) {
       return NextResponse.json({
         success: true,
         message: 'No platform logos found in IGDB',
@@ -60,69 +128,12 @@ export async function POST(request: NextRequest) {
         new: 0,
         updated: 0
       });
-    }
-
-    // Process each logo
-    let newCount = 0;
-    let updatedCount = 0;
-
-    for (const logo of allLogos) {
-      try {
-        // Compute the standard image URL if image_id exists
-        const computedUrl = logo.image_id ? 
-          `https://images.igdb.com/igdb/image/upload/t_logo_med/${logo.image_id}.png` : 
-          null;
-
-        const existingLogo = await prisma.igdbPlatformLogo.findUnique({
-          where: { igdbId: logo.id }
-        });
-
-        if (existingLogo) {
-          // Update existing logo
-          await prisma.igdbPlatformLogo.update({
-            where: { igdbId: logo.id },
-            data: {
-              alpha_channel: logo.alpha_channel,
-              animated: logo.animated,
-              checksum: logo.checksum,
-              height: logo.height,
-              image_id: logo.image_id,
-              url: logo.url,
-              width: logo.width,
-              computed_url: computedUrl
-            }
-          });
-          updatedCount++;
-        } else {
-          // Create new logo
-          await prisma.igdbPlatformLogo.create({
-            data: {
-              igdbId: logo.id,
-              alpha_channel: logo.alpha_channel,
-              animated: logo.animated,
-              checksum: logo.checksum,
-              height: logo.height,
-              image_id: logo.image_id,
-              url: logo.url,
-              width: logo.width,
-              computed_url: computedUrl
-            }
-          });
-          newCount++;
-        }
-      } catch (error) {
-        console.error(`Error syncing logo ${logo.id}:`, error);
-      }
-    }
-
-    console.log(`Platform logos sync completed: ${newCount} new, ${updatedCount} updated`);
-
-    return NextResponse.json({
+    }    return NextResponse.json({
       success: true,
-      message: `Platform logos sync completed!\n✅ ${newCount} new logos added\n🔄 ${updatedCount} logos updated\n📊 Total processed: ${allLogos.length}`,
-      totalSynced: allLogos.length,
-      new: newCount,
-      updated: updatedCount
+      message: `Platform logos sync completed!\n✅ ${totalNewCount} new logos added\n🔄 ${totalUpdatedCount} logos updated\n📊 Total processed: ${totalProcessed}`,
+      totalSynced: totalProcessed,
+      new: totalNewCount,
+      updated: totalUpdatedCount
     });
 
   } catch (error) {

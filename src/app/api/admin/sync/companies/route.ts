@@ -18,6 +18,17 @@ async function fetchIgdbData(
   const accessToken = await getIGDBAccessToken()
   const body = `fields ${fields}; limit ${limit}; offset ${offset}; sort id asc;`;
 
+  console.log(`Sending request to IGDB ${endpoint} API:`, {
+    url: `https://api.igdb.com/v4/${endpoint}`,
+    method: 'POST',
+    headers: {
+      'Client-ID': IGDB_CLIENT_ID!,
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body
+  });
+
   const response = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
     method: 'POST',
     headers: {
@@ -55,11 +66,12 @@ export async function POST(request: NextRequest) {
       if (companies.length === 0) {
         console.log('No more companies to fetch');
         break;
-      }
+      }      console.log(`Processing ${companies.length} companies...`);
 
-      console.log(`Processing ${companies.length} companies...`);      // Process companies in batches to avoid overwhelming the database
+      // Process companies in batches to avoid overwhelming the database
       for (const company of companies) {
-        try {          await prisma.igdbCompany.upsert({
+        try {
+          await prisma.igdbCompany.upsert({
             where: { igdbId: company.id },
             update: {
               name: company.name,

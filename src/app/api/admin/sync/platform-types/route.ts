@@ -3,11 +3,23 @@ import { getIGDBAccessToken } from '@/lib/igdb-token';
 import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
-  try {
-    console.log('Starting platform types sync...');
+  try {    console.log('Starting platform types sync...');
     
     // Get IGDB token
     const token = await getIGDBAccessToken();
+    
+    const requestBody = 'fields id,name; limit 500;'
+    
+    console.log('IGDB API Request:', {
+      url: 'https://api.igdb.com/v4/platform_types',
+      method: 'POST',
+      headers: {
+        'Client-ID': process.env.IGDB_CLIENT_ID!,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: requestBody
+    })
     
     // Fetch platform types from IGDB
     const response = await fetch('https://api.igdb.com/v4/platform_types', {
@@ -17,7 +29,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: 'fields id,name; limit 500;',
+      body: requestBody,
     });
 
     if (!response.ok) {

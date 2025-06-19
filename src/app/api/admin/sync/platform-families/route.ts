@@ -7,8 +7,19 @@ export async function POST(request: NextRequest) {
     console.log('Starting platform families sync...');
       // Get IGDB token
     const token = await getIGDBAccessToken();
-    
-    // Fetch platform families from IGDB
+      // Fetch platform families from IGDB
+    const requestBody = 'fields id,name,slug; limit 500;';
+    console.log('Sending request to IGDB platform_families API:', {
+      url: 'https://api.igdb.com/v4/platform_families',
+      method: 'POST',
+      headers: {
+        'Client-ID': process.env.IGDB_CLIENT_ID!,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: requestBody
+    });
+
     const response = await fetch('https://api.igdb.com/v4/platform_families', {
       method: 'POST',
       headers: {
@@ -16,7 +27,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: 'fields id,name,slug; limit 500;',
+      body: requestBody,
     });
 
     if (!response.ok) {
@@ -62,9 +73,10 @@ export async function POST(request: NextRequest) {
           console.log(`Added platform family: ${family.name} (ID: ${family.id})`);
         }
       } catch (error) {
-        console.error(`Error syncing platform family ${family.id}:`, error);
-      }
-    }    console.log(`Platform families sync completed: ${syncedCount} added, ${updatedCount} updated`);
+        console.error(`Error syncing platform family ${family.id}:`, error);      }
+    }
+
+    console.log(`Platform families sync completed: ${syncedCount} added, ${updatedCount} updated`);
 
     return NextResponse.json({
       success: true,

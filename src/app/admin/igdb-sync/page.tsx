@@ -1,5 +1,6 @@
 import { Container, Typography, Box } from '@mui/material'
-import IGDBSyncManager from '@/app/ui/IGDBSyncManager'
+import IGDBSyncManagerReorganized from '@/app/ui/IGDBSyncManagerReorganized'
+import IGDBGamesSyncManager from '@/app/ui/IGDBGamesSyncManager'
 
 export default function IGDBSyncPage() {
   return (
@@ -13,7 +14,8 @@ export default function IGDBSyncPage() {
         </Typography>
       </Box>
       
-      <IGDBSyncManager />
+      <IGDBSyncManagerReorganized />
+      <IGDBGamesSyncManager />
     </Container>
   )
 }

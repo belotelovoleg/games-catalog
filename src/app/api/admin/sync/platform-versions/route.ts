@@ -10,9 +10,21 @@ async function fetchAllPlatformVersions(accessToken: string) {
   const limit = 500
   
   console.log('Starting platform versions sync...')
-  
-  while (true) {
+    while (true) {
     console.log(`Fetching platform versions batch: offset ${offset}, limit ${limit}`)
+    
+    const requestBody = `fields *; limit ${limit}; offset ${offset}; sort id asc;`
+    
+    console.log('IGDB API Request:', {
+      url: 'https://api.igdb.com/v4/platform_versions',
+      method: 'POST',
+      headers: {
+        'Client-ID': IGDB_CLIENT_ID!,
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+      },
+      body: requestBody
+    })
     
     const res = await fetch('https://api.igdb.com/v4/platform_versions', {
       method: 'POST',
@@ -22,7 +34,7 @@ async function fetchAllPlatformVersions(accessToken: string) {
         'Accept': 'application/json',
       },
       // Get ALL fields from IGDB platform_versions API
-      body: `fields *; limit ${limit}; offset ${offset}; sort id asc;`,
+      body: requestBody,
     })
     
     if (!res.ok) {

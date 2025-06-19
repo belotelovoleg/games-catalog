@@ -8,6 +8,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PlatformStatus {
+  OWNED
+  WISHLISTED
+}
+
+enum GameStatus {
+  OWNED
+  WISHLISTED
+}
+
+enum GameCondition {
+  MINT         // Perfect condition
+  NEAR_MINT    // Very minor wear
+  EXCELLENT    // Light wear but fully functional
+  VERY_GOOD    // Moderate wear but good condition
+  GOOD         // Noticeable wear but works well
+  FAIR         // Significant wear but functional
+  POOR         // Heavy wear, may have issues
+  SEALED       // Brand new, never opened
+}
+
 model User {
   id          Int      @id @default(autoincrement())
   email       String   @unique
@@ -58,21 +79,18 @@ model UserGame {
   userId      Int
   platformId  Int
   
-  // Game details (from IGDB or user input)
-  title       String
-  description String?
-  imageUrl    String?
-  igdbId      Int?     // IGDB game ID if from API
+  // Essential game details  
+  igdbGameId  Int?     // Reference to IgdbGames - optional, can be null for custom games
+  name        String   // Game name (from IGDB initially, but user can rename)
+  rating      Float?   // User's own rating (from IGDB initially, but user can change)
   
   // Collection details
   status      GameStatus    // OWNED or WISHLISTED
-  condition   GameCondition? // Only for owned games
+  condition   GameCondition? // Only for owned games (like NEW, USED, etc.)
   notes       String?       // User notes
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  @@unique([userId, platformId, igdbId, status]) // Prevent exact duplicates
 }
 
 model IgdbPlatformVersion {
@@ -97,11 +115,6 @@ model IgdbPlatformVersion {
   storage                        String?  // How much storage there is
   summary                        String?  // A short summary
   url                            String?  // The website address (URL) of the item
-  
-  // Local metadata only
-  lastSynced     DateTime @default(now())
-  localCreatedAt DateTime @default(now())
-  localUpdatedAt DateTime @updatedAt
 }
 
 model IgdbPlatform {
@@ -123,11 +136,6 @@ model IgdbPlatform {
   url              String?  // The website address (URL) of the item
   versions         String?  // Array of Platform Version IDs (stored as JSON string)
   websites         String?  // Array of Platform Website IDs (stored as JSON string)
-  
-  // Local metadata only
-  lastSynced       DateTime @default(now())
-  localCreatedAt   DateTime @default(now())
-  localUpdatedAt   DateTime @updatedAt
 }
 
 model IgdbCompany {
@@ -164,23 +172,106 @@ model IgdbPlatformLogo {
   computed_url  String? // Pre-computed IGDB logo URL (e.g., "https://images.igdb.com/igdb/image/upload/t_logo_med/plnf.png")
 }
 
-enum PlatformStatus {
-  OWNED
-  WISHLISTED
+model IgdbGames {
+  // IGDB game data - using IGDB ID as primary key - ONLY REQUIRED FIELDS
+  igdbId                    Int      @id // IGDB game ID (id field) - PRIMARY KEY
+  
+  // Essential game data - ONLY what we need
+  name                      String   // The name of the game
+  rating                    Float?   // The rating of the game (0-100)
+  storyline                 String?  // A longer description
+  url                       String?  // The website URL
+  
+  // Media and content (stored as JSON arrays or individual IDs)
+  cover                     Int?     // Reference ID for Game Cover
+  screenshots               String?  // Array of Screenshot IDs (stored as JSON string)
+  
+  // Game content categorization (stored as JSON arrays)
+  age_ratings               String?  // Array of Age Rating IDs (stored as JSON string)
+  alternative_names         String?  // Array of Alternative Name IDs (stored as JSON string)
+  franchise                 Int?     // Reference ID for Franchise
+  game_engines              String?  // Array of Game Engine IDs (stored as JSON string)
+  game_type                 Int?     // Reference ID for Game Type
+  genres                    String?  // Array of Genre IDs (stored as JSON string)
+  involved_companies        String?  // Array of Involved Company IDs (stored as JSON string)
+  multiplayer_modes         String?  // Array of Multiplayer Mode IDs (stored as JSON string)
+  
+  // Sync metadata - which IGDB platform this game was synced for
+  platformId                Int?     // IGDB Platform ID this was synced for
+  platformVersionId         Int?     // IGDB Platform Version ID this was synced for
 }
 
-enum GameStatus {
-  OWNED
-  WISHLISTED
+model IgdbAgeRatingCategories {
+  // IGDB age rating category data - minimal data for category name resolution
+  igdbId   Int    @id // IGDB age rating category ID (id field) - PRIMARY KEY
+  rating   String // The rating name
 }
 
-enum GameCondition {
-  MINT         // Perfect condition
-  NEAR_MINT    // Very minor wear
-  EXCELLENT    // Light wear but fully functional
-  VERY_GOOD    // Moderate wear but good condition
-  GOOD         // Noticeable wear but works well
-  FAIR         // Significant wear but functional
-  POOR         // Heavy wear, may have issues
-  SEALED       // Brand new, never opened
+model IgdbAgeRatings {
+  // IGDB age rating data - minimal data for age rating resolution
+  igdbId             Int     @id // IGDB age rating ID (id field) - PRIMARY KEY
+  rating_category    Int?    // Reference ID for Age Rating Category
+  rating_cover_url   String? // The url for the image of a age rating
+}
+
+model IgdbAlternativeNames {
+  // IGDB alternative name data - for games that we have in our DB
+  igdbId   Int    @id // IGDB alternative name ID (id field) - PRIMARY KEY
+  name     String // An alternative name
+}
+
+model IgdbCovers {
+  // IGDB cover data - for games that we have in our DB
+  igdbId   Int     @id // IGDB cover ID (id field) - PRIMARY KEY
+  height   Int?    // The height of the image in pixels
+  image_id String? // The ID of the image used to construct an IGDB image link
+  url      String? // The website address (URL) of the item
+  width    Int?    // The width of the image in pixels
+}
+
+model IgdbFranchises {
+  // IGDB franchise data - minimal data for franchise name resolution
+  igdbId   Int    @id // IGDB franchise ID (id field) - PRIMARY KEY
+  name     String // The name of the franchise
+}
+
+model IgdbGameEngines {
+  // IGDB game engine data - minimal data for engine name resolution
+  igdbId   Int    @id // IGDB game engine ID (id field) - PRIMARY KEY
+  name     String // Name of the game engine
+}
+
+model IgdbGameTypes {
+  // IGDB game type data - minimal data for type resolution
+  igdbId   Int    @id // IGDB game type ID (id field) - PRIMARY KEY
+  type     String // The game type
+}
+
+model IgdbGenres {
+  // IGDB genre data - minimal data for genre name resolution
+  igdbId   Int    @id // IGDB genre ID (id field) - PRIMARY KEY
+  name     String // Genre name
+}
+
+model IgdbMultiplayerModes {
+  // IGDB multiplayer mode data - detailed multiplayer capabilities
+  igdbId             Int      @id // IGDB multiplayer mode ID (id field) - PRIMARY KEY
+  lancoop            Boolean? // True if the game supports LAN coop
+  offlinecoop        Boolean? // True if the game supports offline coop
+  offlinecoopmax     Int?     // Maximum number of offline players in offline coop
+  offlinemax         Int?     // Maximum number of players in offline multiplayer
+  onlinecoop         Boolean? // True if the game supports online coop
+  onlinecoopmax      Int?     // Maximum number of online players in online coop
+  onlinemax          Int?     // Maximum number of players in online multiplayer
+  splitscreen        Boolean? // True if the game supports split screen, offline multiplayer
+  splitscreenonline  Boolean? // True if the game supports split screen, online multiplayer
+}
+
+model IgdbScreenshots {
+  // IGDB screenshot data - for games that we have in our DB
+  igdbId   Int     @id // IGDB screenshot ID (id field) - PRIMARY KEY
+  height   Int?    // The height of the image in pixels
+  image_id String? // The ID of the image used to construct an IGDB image link
+  url      String? // The website address (URL) of the item
+  width    Int?    // The width of the image in pixels
 }

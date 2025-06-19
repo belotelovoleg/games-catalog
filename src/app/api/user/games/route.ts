@@ -33,12 +33,17 @@ export async function GET(req: Request) {
   }
 
   try {
+    const url = new URL(req.url)
+    const platformId = url.searchParams.get('platformId')
+    
+    const whereClause: any = { userId: user.id }
+    if (platformId) {
+      whereClause.platformId = parseInt(platformId)
+    }
+
     const userGames = await prisma.userGame.findMany({
-      where: { userId: user.id },
-      include: {
-        platform: true
-      },
-      orderBy: { title: 'asc' }
+      where: whereClause,
+      orderBy: { name: 'asc' }
     })
 
     return NextResponse.json(userGames)
@@ -58,11 +63,11 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { title, description, imageUrl, platformId, status, condition, notes, igdbId } = await req.json()
+    const { name, rating, platformId, status, condition, notes, igdbGameId } = await req.json()
 
-    if (!title || !platformId || !status) {
+    if (!name || !platformId || !status) {
       return NextResponse.json(
-        { error: 'Title, platform ID and status are required' },
+        { error: 'Name, platform ID and status are required' },
         { status: 400 }
       )
     }
@@ -70,17 +75,13 @@ export async function POST(req: Request) {
     const userGame = await prisma.userGame.create({
       data: {
         userId: user.id,
-        title,
-        description,
-        imageUrl,
+        name,
+        rating,
         platformId: parseInt(platformId),
         status,
         condition,
         notes,
-        igdbId
-      },
-      include: {
-        platform: true
+        igdbGameId
       }
     })
 

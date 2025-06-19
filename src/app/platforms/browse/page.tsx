@@ -132,7 +132,7 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
       const [platformsRes, userPlatformsRes] = await Promise.all([
         fetch(`/api/platforms/browse?${params.toString()}`),
         fetch('/api/user/platforms', {
-          headers: { Cookie: `token=${Cookies.get('token')}` }
+          credentials: 'include'
         })
       ])
 
@@ -151,15 +151,14 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
       setLoading(false)
     }
   }
-
   const addPlatform = async (platformId: number, status: 'OWNED' | 'WISHLISTED') => {
     try {
       const response = await fetch('/api/user/platforms', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json',
-          Cookie: `token=${Cookies.get('token')}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // This ensures cookies are sent
         body: JSON.stringify({ platformId, status })
       })
 
@@ -168,15 +167,22 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to add platform')
-      }
-    } catch (error) {
+      }    } catch (error) {
       setError('Failed to add platform')
     }
   }
+
   const getPlatformStatus = (platformId: number) => {
     return userPlatforms.find(up => up.platform.id === platformId)?.status
   }
+  
   const handlePlatformClick = (platformId: number) => {
+    // Navigate to the platform games page
+    router.push(`/platforms/${platformId}`)
+  }
+
+  const handleShowDetails = (platformId: number, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent card click from firing
     const platform = platforms.find(p => p.id === platformId)
     if (platform) {
       setSelectedPlatform(platform)
@@ -408,16 +414,24 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
                       )}
                     </CardContent>
                     
-                    <CardActions sx={{ pt: 0 }}>
-                      <Button 
+                    <CardActions sx={{ pt: 0 }}>                      <Button 
                         size="small" 
                         startIcon={<Info />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleShowDetails(platform.id, e)
+                        }}                      >
+                        Details
+                      </Button>
+                      <Button 
+                        size="small" 
+                        variant="text"
                         onClick={(e) => {
                           e.stopPropagation()
                           handlePlatformClick(platform.id)
                         }}
                       >
-                        Details
+                        View Games
                       </Button>
                       {!status && (
                         <>

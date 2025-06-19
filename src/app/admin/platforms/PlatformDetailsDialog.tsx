@@ -66,7 +66,8 @@ export default function PlatformDetailsDialog({
                 Platform Details: {displayName}
             </DialogTitle>
             <DialogContent>
-                <Box sx={{ display: 'flex', gap: 3 }}>                    {/* Platform Image */}
+                <Box sx={{ display: 'flex', gap: 3 }}>
+                    {/* Platform Image */}
                     <Box sx={{ minWidth: 200 }}>
                         {imageUrl ? (
                             <img 
