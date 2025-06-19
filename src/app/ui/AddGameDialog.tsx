@@ -298,13 +298,12 @@ export default function AddGameDialog({ open, onClose, platformId, platform, onG
           minHeight: 500
         }
       }}
-    >
-      <DialogTitle sx={{ 
+    >      <DialogTitle sx={{ 
         bgcolor: 'primary.main', 
         color: 'primary.contrastText',
         p: 3
       }}>
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+        <Typography component="span" variant="h5" sx={{ fontWeight: 600 }}>
           Add Game to {platform?.name}
         </Typography>
       </DialogTitle>
@@ -388,24 +387,14 @@ export default function AddGameDialog({ open, onClose, platformId, platform, onG
                         </Button>
                       </Box>
                     }
-                  >
-                    <ListItemText
+                  >                    <ListItemText
                       primary={game.name}
                       secondary={
-                        <Box>
-                          {game.rating && (
-                            <Chip 
-                              label={`${Math.round(game.rating)}/100`} 
-                              size="small" 
-                              sx={{ mr: 1 }} 
-                            />
-                          )}
-                          {game.storyline && (
-                            <Typography variant="body2" sx={{ mt: 1 }}>
-                              {game.storyline.substring(0, 100)}...
-                            </Typography>
-                          )}
-                        </Box>
+                        <span>
+                          {game.rating && `Rating: ${Math.round(game.rating)}/100`}
+                          {game.rating && game.storyline && ' • '}
+                          {game.storyline && game.storyline.substring(0, 80) + '...'}
+                        </span>
                       }
                       sx={{ pr: 20 }} // Add padding to avoid overlap with buttons
                     />

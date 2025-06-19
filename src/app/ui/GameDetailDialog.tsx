@@ -324,9 +324,8 @@ export default function GameDetailDialog({
           bgcolor: 'primary.main', 
           color: 'primary.contrastText',
           p: { xs: 2, md: 3 }
-        }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Typography variant="h5" sx={{ 
+        }}>          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography component="span" variant="h5" sx={{ 
               fontSize: { xs: '1.25rem', md: '1.5rem' },
               fontWeight: 600 
             }}>

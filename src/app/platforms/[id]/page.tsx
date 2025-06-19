@@ -26,7 +26,11 @@ import {
   useTheme,
   useMediaQuery,
   TextField,
-  InputAdornment
+  InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material'
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material'
 import GameDetailDialog from '../../ui/GameDetailDialog'
@@ -136,11 +140,19 @@ export default function PlatformGamesPage() {  const params = useParams()
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const platformId = parseInt(params.id as string)
-  
-  const [platform, setPlatform] = useState<Platform | null>(null)
+    const [platform, setPlatform] = useState<Platform | null>(null)
   const [userGames, setUserGames] = useState<GameWithIgdbDetails[]>([])
   const [filteredGames, setFilteredGames] = useState<GameWithIgdbDetails[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedGenre, setSelectedGenre] = useState<string>('')
+  const [selectedFranchise, setSelectedFranchise] = useState<string>('')
+  const [selectedCompany, setSelectedCompany] = useState<string>('')
+  const [selectedMultiplayer, setSelectedMultiplayer] = useState<string>('')
+  const [selectedStatus, setSelectedStatus] = useState<string>('') // '' = all, 'OWNED', 'WISHLISTED'
+  const [availableGenres, setAvailableGenres] = useState<string[]>([])
+  const [availableFranchises, setAvailableFranchises] = useState<string[]>([])
+  const [availableCompanies, setAvailableCompanies] = useState<string[]>([])
+  const [availableMultiplayerModes, setAvailableMultiplayerModes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<DecodedToken | null>(null)
@@ -171,15 +183,61 @@ export default function PlatformGamesPage() {  const params = useParams()
     if (user) {
       fetchPlatformAndGames()
     }
-  }, [platformId, user])
-
-  // Filter games based on search query
+  }, [platformId, user])  // Extract available filters when userGames changes
   useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredGames(userGames)
-    } else {
+    const genres = new Set<string>()
+    const franchises = new Set<string>()
+    const companies = new Set<string>()
+    const multiplayerModes = new Set<string>()
+    
+    userGames.forEach(game => {
+      // Extract genres
+      if (game.igdbDetails?.genreDetails) {
+        game.igdbDetails.genreDetails.forEach(genre => {
+          if (genre.name) {
+            genres.add(genre.name)
+          }
+        })
+      }
+      
+      // Extract franchises
+      if (game.igdbDetails?.franchiseDetails?.name) {
+        franchises.add(game.igdbDetails.franchiseDetails.name)
+      }
+      
+      // Extract companies
+      if (game.igdbDetails?.companyDetails) {
+        game.igdbDetails.companyDetails.forEach(company => {
+          if (company.name) {
+            companies.add(company.name)
+          }
+        })
+      }
+      
+      // Extract multiplayer modes
+      if (game.igdbDetails?.multiplayerModeDetails) {
+        game.igdbDetails.multiplayerModeDetails.forEach(mode => {
+          if (mode.lancoop) multiplayerModes.add('LAN Co-op')
+          if (mode.offlinecoop) multiplayerModes.add('Offline Co-op')
+          if (mode.onlinecoop) multiplayerModes.add('Online Co-op')
+          if (mode.splitscreen) multiplayerModes.add('Split Screen')
+        })
+      }
+    })
+    
+    setAvailableGenres(Array.from(genres).sort())
+    setAvailableFranchises(Array.from(franchises).sort())
+    setAvailableCompanies(Array.from(companies).sort())
+    setAvailableMultiplayerModes(Array.from(multiplayerModes).sort())
+  }, [userGames])
+  // Filter games based on search query and filters
+  useEffect(() => {
+    let filtered = userGames
+
+    // Apply search filter
+    if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      const filtered = userGames.filter(game => {
+      filtered = filtered.filter(game => {
         // Search in main game name
         if (game.name.toLowerCase().includes(query)) {
           return true
@@ -194,9 +252,60 @@ export default function PlatformGamesPage() {  const params = useParams()
         
         return false
       })
-      setFilteredGames(filtered)
     }
-  }, [userGames, searchQuery])
+
+    // Apply genre filter
+    if (selectedGenre) {
+      filtered = filtered.filter(game => {
+        if (game.igdbDetails?.genreDetails) {
+          return game.igdbDetails.genreDetails.some(genre => genre.name === selectedGenre)
+        }
+        return false
+      })
+    }
+
+    // Apply franchise filter
+    if (selectedFranchise) {
+      filtered = filtered.filter(game => {
+        return game.igdbDetails?.franchiseDetails?.name === selectedFranchise
+      })
+    }
+
+    // Apply company filter
+    if (selectedCompany) {
+      filtered = filtered.filter(game => {
+        if (game.igdbDetails?.companyDetails) {
+          return game.igdbDetails.companyDetails.some(company => company.name === selectedCompany)
+        }
+        return false
+      })
+    }    // Apply multiplayer filter
+    if (selectedMultiplayer) {
+      filtered = filtered.filter(game => {
+        if (game.igdbDetails?.multiplayerModeDetails) {
+          return game.igdbDetails.multiplayerModeDetails.some(mode => {
+            switch (selectedMultiplayer) {
+              case 'LAN Co-op': return mode.lancoop
+              case 'Offline Co-op': return mode.offlinecoop
+              case 'Online Co-op': return mode.onlinecoop
+              case 'Split Screen': return mode.splitscreen
+              default: return false
+            }
+          })
+        }
+        return false
+      })
+    }
+
+    // Apply status filter
+    if (selectedStatus) {
+      filtered = filtered.filter(game => {
+        return game.status === selectedStatus
+      })
+    }
+
+    setFilteredGames(filtered)
+  }, [userGames, searchQuery, selectedGenre, selectedFranchise, selectedCompany, selectedMultiplayer, selectedStatus])
   
   const fetchPlatformAndGames = async () => {
     try {
@@ -392,8 +501,8 @@ export default function PlatformGamesPage() {  const params = useParams()
                 Your game collection for {platform.name}
               </Typography>              <Typography variant="body2" sx={{ opacity: 0.8, mt: 1 }}>
                 {userGames.length} {userGames.length === 1 ? 'game' : 'games'} in your collection
-                {searchQuery && (
-                  <span> • {filteredGames.length} matching search</span>
+                {(searchQuery || selectedGenre || selectedFranchise || selectedCompany || selectedMultiplayer || selectedStatus) && (
+                  <span> • {filteredGames.length} matching filters</span>
                 )}
               </Typography>
             </Box>
@@ -418,41 +527,181 @@ export default function PlatformGamesPage() {  const params = useParams()
           >
             Add Game
           </Button>        </Box>
-      </Paper>
+      </Paper>      {/* Search and Filter Bar */}
+      {userGames.length > 0 && (        <Paper sx={{ p: 2, mb: 3, backgroundColor: theme.palette.mode === 'dark' ? 'grey.800' : 'background.paper' }}>
+          <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, flexWrap: 'wrap' }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search games by name or alternative name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: searchQuery && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      onClick={() => setSearchQuery('')}
+                      edge="end"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
+                },
+                flex: { xs: '1', md: '2' }
+              }}
+            />
+              {/* Filter Controls */}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flex: { xs: '1', md: '3' } }}>
+              {/* Status Filter */}
+              <FormControl sx={{ minWidth: 100, flex: 1 }}>
+                <InputLabel size="small">Status</InputLabel>
+                <Select
+                  size="small"
+                  value={selectedStatus}
+                  label="Status"
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  sx={{
+                    backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
+                  }}
+                >
+                  <MenuItem value="">
+                    <em>All</em>
+                  </MenuItem>
+                  <MenuItem value="OWNED">Owned</MenuItem>
+                  <MenuItem value="WISHLISTED">Wishlisted</MenuItem>
+                </Select>
+              </FormControl>
 
-      {/* Search Bar */}
-      {userGames.length > 0 && (
-        <Paper sx={{ p: 2, mb: 3, backgroundColor: theme.palette.mode === 'dark' ? 'grey.800' : 'background.paper' }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Search games by name or alternative name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-              endAdornment: searchQuery && (
-                <InputAdornment position="end">
-                  <IconButton
+              {/* Genre Filter */}
+              {availableGenres.length > 0 && (
+                <FormControl sx={{ minWidth: 120, flex: 1 }}>
+                  <InputLabel size="small">Genre</InputLabel>
+                  <Select
                     size="small"
-                    onClick={() => setSearchQuery('')}
-                    edge="end"
+                    value={selectedGenre}
+                    label="Genre"
+                    onChange={(e) => setSelectedGenre(e.target.value)}
+                    sx={{
+                      backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
+                    }}
                   >
-                    <ClearIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
-              }
-            }}
-          />
+                    <MenuItem value="">
+                      <em>All</em>
+                    </MenuItem>
+                    {availableGenres.map((genre) => (
+                      <MenuItem key={genre} value={genre}>
+                        {genre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Franchise Filter */}
+              {availableFranchises.length > 0 && (
+                <FormControl sx={{ minWidth: 120, flex: 1 }}>
+                  <InputLabel size="small">Franchise</InputLabel>
+                  <Select
+                    size="small"
+                    value={selectedFranchise}
+                    label="Franchise"
+                    onChange={(e) => setSelectedFranchise(e.target.value)}
+                    sx={{
+                      backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>All</em>
+                    </MenuItem>
+                    {availableFranchises.map((franchise) => (
+                      <MenuItem key={franchise} value={franchise}>
+                        {franchise}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Company Filter */}
+              {availableCompanies.length > 0 && (
+                <FormControl sx={{ minWidth: 120, flex: 1 }}>
+                  <InputLabel size="small">Company</InputLabel>
+                  <Select
+                    size="small"
+                    value={selectedCompany}
+                    label="Company"
+                    onChange={(e) => setSelectedCompany(e.target.value)}
+                    sx={{
+                      backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>All</em>
+                    </MenuItem>
+                    {availableCompanies.map((company) => (
+                      <MenuItem key={company} value={company}>
+                        {company}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Multiplayer Filter */}
+              {availableMultiplayerModes.length > 0 && (
+                <FormControl sx={{ minWidth: 120, flex: 1 }}>
+                  <InputLabel size="small">Multiplayer</InputLabel>
+                  <Select
+                    size="small"
+                    value={selectedMultiplayer}
+                    label="Multiplayer"
+                    onChange={(e) => setSelectedMultiplayer(e.target.value)}
+                    sx={{
+                      backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em>All</em>
+                    </MenuItem>
+                    {availableMultiplayerModes.map((mode) => (
+                      <MenuItem key={mode} value={mode}>
+                        {mode}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+              {/* Clear All Filters Button */}
+            {(searchQuery || selectedGenre || selectedFranchise || selectedCompany || selectedMultiplayer || selectedStatus) && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  setSearchQuery('')
+                  setSelectedGenre('')
+                  setSelectedFranchise('')
+                  setSelectedCompany('')
+                  setSelectedMultiplayer('')
+                  setSelectedStatus('')
+                }}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Clear All
+              </Button>
+            )}
+          </Box>
         </Paper>
       )}
 
@@ -488,9 +737,8 @@ export default function PlatformGamesPage() {  const params = useParams()
             }}          >
             Add Your First Game
           </Button>
-        </Paper>
-      ) : filteredGames.length === 0 ? (
-        // No search results
+        </Paper>      ) : filteredGames.length === 0 ? (
+        // No search/filter results
         <Paper sx={{ 
           p: 4, 
           textAlign: 'center',
@@ -498,19 +746,28 @@ export default function PlatformGamesPage() {  const params = useParams()
           background: theme.palette.mode === 'dark'
             ? 'linear-gradient(135deg, #2c2c2c 0%, #404040 100%)'
             : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-        }}>
-          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-            No games found matching "{searchQuery}"
+        }}>          <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+            No games found{searchQuery && ` matching "${searchQuery}"`}{selectedGenre && ` in genre "${selectedGenre}"`}{selectedFranchise && ` in franchise "${selectedFranchise}"`}{selectedCompany && ` by company "${selectedCompany}"`}{selectedMultiplayer && ` with "${selectedMultiplayer}"`}{selectedStatus && ` with status "${selectedStatus.toLowerCase()}"`}
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Try searching with a different term or check the alternative names for your games.
+            {searchQuery || selectedGenre || selectedFranchise || selectedCompany || selectedMultiplayer || selectedStatus ? 
+              'Try adjusting your search or filters, or add a new game to your collection.' :
+              'Try searching with a different term or check the alternative names for your games.'
+            }
           </Typography>
           <Button
             variant="outlined"
-            onClick={() => setSearchQuery('')}
+            onClick={() => {
+              setSearchQuery('')
+              setSelectedGenre('')
+              setSelectedFranchise('')
+              setSelectedCompany('')
+              setSelectedMultiplayer('')
+              setSelectedStatus('')
+            }}
             sx={{ mr: 2 }}
           >
-            Clear Search
+            Clear All Filters
           </Button>
           <Button
             variant="contained"
@@ -574,15 +831,104 @@ export default function PlatformGamesPage() {  const params = useParams()
                         variant="outlined"
                         sx={{ ml: 1 }}
                       />
+                    </Box>                  )}
+                    {/* Genres */}
+                  {game.igdbDetails?.genreDetails && game.igdbDetails.genreDetails.length > 0 && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" component="span">
+                        Genres: 
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {game.igdbDetails.genreDetails.slice(0, 4).map((genre) => (
+                          <Chip 
+                            key={genre.igdbId}
+                            label={genre.name} 
+                            size="small" 
+                            variant="outlined" 
+                            color="primary"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedGenre(genre.name)
+                            }}
+                            sx={{ 
+                              cursor: 'pointer',
+                              '&:hover': {
+                                backgroundColor: 'primary.light',
+                                color: 'primary.contrastText'
+                              }
+                            }}
+                          />
+                        ))}
+                        {game.igdbDetails.genreDetails.length > 4 && (
+                          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
+                            +{game.igdbDetails.genreDetails.length - 4} more
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                   )}
                   
-                  {game.igdbDetails?.genres && (
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Genres:</strong> Available in details
-                    </Typography>
+                  {/* Franchise */}
+                  {game.igdbDetails?.franchiseDetails && (
+                    <Box>
+                      <Chip 
+                        label={`📚 ${game.igdbDetails.franchiseDetails.name}`} 
+                        size="small" 
+                        variant="outlined" 
+                        color="secondary"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (game.igdbDetails?.franchiseDetails?.name) {
+                            setSelectedFranchise(game.igdbDetails.franchiseDetails.name)
+                          }
+                        }}
+                        sx={{ 
+                          cursor: 'pointer',
+                          '&:hover': {
+                            backgroundColor: 'secondary.light',
+                            color: 'secondary.contrastText'
+                          }
+                        }}
+                      />
+                    </Box>
                   )}
                   
+                  {/* Companies */}
+                  {game.igdbDetails?.companyDetails && game.igdbDetails.companyDetails.length > 0 && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" component="span">
+                        Companies: 
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                        {game.igdbDetails.companyDetails.slice(0, 3).map((company) => (
+                          <Chip 
+                            key={company.igdbId}
+                            label={company.name} 
+                            size="small" 
+                            variant="outlined" 
+                            color="info"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedCompany(company.name)
+                            }}
+                            sx={{ 
+                              cursor: 'pointer',
+                              '&:hover': {
+                                backgroundColor: 'info.light',
+                                color: 'info.contrastText'
+                              }
+                            }}
+                          />
+                        ))}
+                        {game.igdbDetails.companyDetails.length > 3 && (
+                          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
+                            +{game.igdbDetails.companyDetails.length - 3} more
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
                   {game.igdbDetails?.franchise && (
                     <Typography variant="body2" color="text.secondary">
                       <strong>Franchise:</strong> Available in details
@@ -626,14 +972,15 @@ export default function PlatformGamesPage() {  const params = useParams()
             <TableHead sx={{ 
               bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
             }}>
-              <TableRow>
+                <TableRow>
                 <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Details Available</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Details</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Rating</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
               </TableRow>
-            </TableHead>            <TableBody>
+            </TableHead>
+            <TableBody>
               {filteredGames.map((game) => (
                 <TableRow
                   key={game.id}
@@ -645,7 +992,8 @@ export default function PlatformGamesPage() {  const params = useParams()
                     }
                   }}
                   onClick={() => handleGameClick(game)}
-                >                  <TableCell>
+                >
+                <TableCell>
                     <Box>
                       <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                         {game.name}
@@ -674,21 +1022,195 @@ export default function PlatformGamesPage() {  const params = useParams()
                     />
                   </TableCell>
                   <TableCell>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                      {game.igdbDetails?.genres && (
-                        <Chip label="Genres" size="small" variant="outlined" color="primary" />
+                    <Stack spacing={1}>
+                      {/* Genres */}
+                      {game.igdbDetails?.genreDetails && game.igdbDetails.genreDetails.length > 0 && (
+                        <Box>
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                            {game.igdbDetails.genreDetails.slice(0, 3).map((genre) => (
+                              <Chip 
+                                key={genre.igdbId}
+                                label={genre.name} 
+                                size="small" 
+                                variant="outlined" 
+                                color="primary"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedGenre(genre.name)
+                                }}
+                                sx={{ 
+                                  cursor: 'pointer',
+                                  '&:hover': {
+                                    backgroundColor: 'primary.light',
+                                    color: 'primary.contrastText'
+                                  }
+                                }}
+                              />
+                            ))}
+                            {game.igdbDetails.genreDetails.length > 3 && (
+                              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                                +{game.igdbDetails.genreDetails.length - 3}
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Box>
                       )}
-                      {game.igdbDetails?.franchise && (
-                        <Chip label="Franchise" size="small" variant="outlined" color="secondary" />
+                        {/* Franchise */}
+                      {game.igdbDetails?.franchiseDetails && (
+                        <Chip 
+                          label={`📚 ${game.igdbDetails.franchiseDetails.name}`} 
+                          size="small" 
+                          variant="outlined" 
+                          color="secondary"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (game.igdbDetails?.franchiseDetails?.name) {
+                              setSelectedFranchise(game.igdbDetails.franchiseDetails.name)
+                            }
+                          }}
+                          sx={{ 
+                            cursor: 'pointer',
+                            maxWidth: 'fit-content',
+                            '&:hover': {
+                              backgroundColor: 'secondary.light',
+                              color: 'secondary.contrastText'
+                            }
+                          }}
+                        />
                       )}
-                      {game.igdbDetails?.involved_companies && (
-                        <Chip label="Companies" size="small" variant="outlined" color="info" />
+                      
+                      {/* Companies */}
+                      {game.igdbDetails?.companyDetails && game.igdbDetails.companyDetails.length > 0 && (
+                        <Box>
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                            {game.igdbDetails.companyDetails.slice(0, 2).map((company) => (
+                              <Chip 
+                                key={company.igdbId}
+                                label={`🏢 ${company.name}`} 
+                                size="small" 
+                                variant="outlined" 
+                                color="info"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedCompany(company.name)
+                                }}
+                                sx={{ 
+                                  cursor: 'pointer',
+                                  '&:hover': {
+                                    backgroundColor: 'info.light',
+                                    color: 'info.contrastText'
+                                  }
+                                }}
+                              />
+                            ))}
+                            {game.igdbDetails.companyDetails.length > 2 && (
+                              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+                                +{game.igdbDetails.companyDetails.length - 2}
+                              </Typography>
+                            )}
+                          </Stack>
+                        </Box>
                       )}
-                      {game.igdbDetails?.multiplayer_modes && (
-                        <Chip label="Multiplayer" size="small" variant="outlined" color="success" />
+                      
+                      {/* Multiplayer Modes */}
+                      {game.igdbDetails?.multiplayerModeDetails && game.igdbDetails.multiplayerModeDetails.length > 0 && (
+                        <Box>
+                          <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                            {game.igdbDetails.multiplayerModeDetails.map((mode, index) => (
+                              <Box key={index}>
+                                {mode.lancoop && (
+                                  <Chip 
+                                    label="🔗 LAN Co-op" 
+                                    size="small" 
+                                    variant="outlined" 
+                                    color="success"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedMultiplayer('LAN Co-op')
+                                    }}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      mr: 0.5,
+                                      mb: 0.5,
+                                      '&:hover': {
+                                        backgroundColor: 'success.light',
+                                        color: 'success.contrastText'
+                                      }
+                                    }}
+                                  />
+                                )}
+                                {mode.offlinecoop && (
+                                  <Chip 
+                                    label="👥 Offline Co-op" 
+                                    size="small" 
+                                    variant="outlined" 
+                                    color="success"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedMultiplayer('Offline Co-op')
+                                    }}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      mr: 0.5,
+                                      mb: 0.5,
+                                      '&:hover': {
+                                        backgroundColor: 'success.light',
+                                        color: 'success.contrastText'
+                                      }
+                                    }}
+                                  />
+                                )}
+                                {mode.onlinecoop && (
+                                  <Chip 
+                                    label="🌐 Online Co-op" 
+                                    size="small" 
+                                    variant="outlined" 
+                                    color="success"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedMultiplayer('Online Co-op')
+                                    }}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      mr: 0.5,
+                                      mb: 0.5,
+                                      '&:hover': {
+                                        backgroundColor: 'success.light',
+                                        color: 'success.contrastText'
+                                      }
+                                    }}
+                                  />
+                                )}
+                                {mode.splitscreen && (
+                                  <Chip 
+                                    label="📺 Split Screen" 
+                                    size="small" 
+                                    variant="outlined" 
+                                    color="success"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSelectedMultiplayer('Split Screen')
+                                    }}
+                                    sx={{ 
+                                      cursor: 'pointer',
+                                      mr: 0.5,
+                                      mb: 0.5,
+                                      '&:hover': {
+                                        backgroundColor: 'success.light',
+                                        color: 'success.contrastText'
+                                      }
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            ))}
+                          </Stack>
+                        </Box>
                       )}
+                      
+                      {/* Custom Game indicator */}
                       {!game.igdbGameId && (
-                        <Chip label="Custom Game" size="small" variant="outlined" color="warning" />
+                        <Chip label="📝 Custom Game" size="small" variant="outlined" color="warning" />
                       )}
                     </Stack>
                   </TableCell>
