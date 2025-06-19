@@ -1,21 +1,9 @@
 "use client"
 
-import { createTheme, ThemeProvider } from '@mui/material/styles'
-import { CssBaseline, Box } from '@mui/material'
 import { ReactNode } from 'react'
+import { Box } from '@mui/material'
+import { ThemeContextProvider } from '../contexts/ThemeContext'
 import LeftMenu from './ui/LeftMenu'
-
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-})
 
 export default function RootLayout({
   children,
@@ -25,15 +13,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <Box sx={{ display: 'flex' }}>
+        <ThemeContextProvider>
+          <Box sx={{ position: 'relative' }}>
             <LeftMenu />
             <Box 
               component="main" 
               sx={{ 
-                flexGrow: 1,
-                transition: 'margin 0.3s ease',
+                width: '100%',
                 minHeight: '100vh',
                 backgroundColor: 'background.default'
               }}
@@ -41,7 +27,7 @@ export default function RootLayout({
               {children}
             </Box>
           </Box>
-        </ThemeProvider>
+        </ThemeContextProvider>
       </body>
     </html>
   )

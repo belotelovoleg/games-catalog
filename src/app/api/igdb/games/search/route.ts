@@ -39,33 +39,26 @@ export async function GET(req: NextRequest) {
     })
 
     // Get the alternative name IDs that match
-    const matchingAltNameIds = matchingAltNames.map(alt => alt.igdbId)
-
-    // Find games that have these alternative name IDs in their alternative_names JSON field
+    const matchingAltNameIds = matchingAltNames.map(alt => alt.igdbId)    // Find games that have these alternative name IDs in their alternative_names JSON field
     let gamesByAltNames: any[] = []
     if (matchingAltNameIds.length > 0) {
-      // Search for games where the alternative_names JSON array contains any of the matching IDs
-      const gamesWithAltNames = await prisma.igdbGames.findMany({
-        where: {
-          alternative_names: {
-            not: null
-          }
-        },
-        take: 100 // Get more games to check their alternative names
-      })
-
-      // Filter games that contain the matching alternative name IDs
-      gamesByAltNames = gamesWithAltNames.filter(game => {
-        if (!game.alternative_names) return false
-        
-        try {
-          const altNameIds = JSON.parse(game.alternative_names)
-          return Array.isArray(altNameIds) && 
-                 altNameIds.some(id => matchingAltNameIds.includes(id))
-        } catch (e) {
-          return false
-        }
-      })
+      // Use PostgreSQL's JSON operators to efficiently find games containing these IDs
+      // This is much more efficient than loading all games and filtering in JS
+      for (const altNameId of matchingAltNameIds) {
+        const gamesWithThisAltName = await prisma.igdbGames.findMany({
+          where: {
+            alternative_names: {
+              contains: `${altNameId}`
+            }
+          },
+          take: 20,
+          orderBy: [
+            { rating: 'desc' },
+            { name: 'asc' }
+          ]
+        })
+        gamesByAltNames.push(...gamesWithThisAltName)
+      }
     }
 
     // Combine and deduplicate results

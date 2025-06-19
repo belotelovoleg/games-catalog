@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogTitle,
@@ -16,12 +16,16 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem,  Stack,
+  MenuItem,
+  Stack,
   Grid,
   IconButton,
   Modal,
   Backdrop,
-  CircularProgress
+  CircularProgress,
+  Card,
+  CardContent,
+  useTheme
 } from '@mui/material'
 import { Close as CloseIcon, ChevronLeft, ChevronRight } from '@mui/icons-material'
 
@@ -126,6 +130,7 @@ export default function GameDetailDialog({
   onGameAdded,
   platformId
 }: GameDetailDialogProps) {
+  const theme = useTheme()
   const [editing, setEditing] = useState(false)
   const [editedName, setEditedName] = useState('')
   const [editedRating, setEditedRating] = useState<number | null>(null)
@@ -137,11 +142,40 @@ export default function GameDetailDialog({
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-
   // Add game from preview state
   const [addingGame, setAddingGame] = useState(false)
   const [addGameStatus, setAddGameStatus] = useState<'OWNED' | 'WISHLISTED'>('OWNED')
   const [addGameCondition, setAddGameCondition] = useState<string>('EXCELLENT')
+  
+  // Mobile detection
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      if (!galleryOpen) return
+      
+      if (event.key === 'ArrowLeft') {
+        prevImage()
+      } else if (event.key === 'ArrowRight') {
+        nextImage()
+      } else if (event.key === 'Escape') {
+        closeGallery()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [galleryOpen, selectedImageIndex])
 
   // Check if this is preview mode (temporary game with id -1)
   const isPreviewMode = game?.id === -1
@@ -270,38 +304,170 @@ export default function GameDetailDialog({
 
   if (!game) return null
   return (
-    <>
-      <Dialog 
+    <>      <Dialog 
         open={open} 
         onClose={onClose} 
-        maxWidth="md" 
+        maxWidth="lg" 
         fullWidth
+        fullScreen={isMobile}
         PaperProps={{
-          sx: { minHeight: '400px' }
+          sx: { 
+            minHeight: { xs: '100vh', md: '600px' },
+            maxHeight: { xs: '100vh', md: '90vh' },
+            m: { xs: 0, md: 2 },
+            borderRadius: { xs: 0, md: 2 },
+            overflow: 'hidden'
+          }
         }}
-      ><DialogTitle>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h5">
-            {isPreviewMode ? `Preview: ${game.name}` : (editing ? editedName : game.name)}
-          </Typography>
-          <Button onClick={onClose}>
-            <CloseIcon />
-          </Button>
-        </Box>
-      </DialogTitle>
-
-      <DialogContent>
+      >
+        <DialogTitle sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'primary.contrastText',
+          p: { xs: 2, md: 3 }
+        }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h5" sx={{ 
+              fontSize: { xs: '1.25rem', md: '1.5rem' },
+              fontWeight: 600 
+            }}>
+              {isPreviewMode ? `Preview: ${game.name}` : (editing ? editedName : game.name)}
+            </Typography>
+            <IconButton 
+              onClick={onClose}
+              sx={{ color: 'primary.contrastText' }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>      <DialogContent sx={{ 
+        p: { xs: 2, md: 3 },
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%'
+      }}>
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
-        )}        <Stack spacing={3}>
-          {/* User Game Information - only show if not preview mode */}
-          {!isPreviewMode && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Your Collection Info
-              </Typography>
+        )}        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', lg: 'row' },
+          gap: { xs: 2, md: 3 }
+        }}>
+          {/* Left Column - Cover and Quick Info */}
+          <Box sx={{ 
+            flex: { xs: '1', lg: '0 0 280px' },
+            order: { xs: 2, lg: 1 }
+          }}>
+            {/* Cover Image */}
+            {(game.igdbDetails as any)?.coverDetails && (
+              <Box sx={{ mb: 2, position: 'sticky', top: 0 }}>
+                <img
+                  src={(game.igdbDetails as any).coverDetails.url?.replace('t_thumb', 't_cover_big') || ''}
+                  alt={`${game.name} cover`}
+                  style={{
+                    width: '100%',
+                    maxWidth: '280px',
+                    height: 'auto',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    display: 'block',
+                    margin: '0 auto',
+                    transition: 'transform 0.2s ease-in-out'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                />
+              </Box>
+            )}
+
+            {/* Quick Info Card */}            <Card sx={{ 
+              mb: 2, 
+              background: (theme) => theme.palette.mode === 'dark' 
+                ? 'linear-gradient(135deg, rgba(66, 165, 245, 0.1) 0%, rgba(100, 181, 246, 0.05) 100%)'
+                : 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+              position: 'sticky',
+              top: (game.igdbDetails as any)?.coverDetails ? '420px' : '0'
+            }}>
+              <CardContent sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom color="primary" sx={{ 
+                  fontWeight: 600,
+                  mb: 2
+                }}>
+                  Quick Info
+                </Typography>
+                
+                {game.rating && (
+                  <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Chip 
+                      label={`${Math.round(game.rating)}/100`} 
+                      color="primary" 
+                      size="small"
+                      sx={{ fontWeight: 600 }}
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                      IGDB Rating
+                    </Typography>
+                  </Box>
+                )}
+
+                {(game.igdbDetails as any)?.franchiseDetails && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      <strong>Franchise</strong>
+                    </Typography>
+                    <Chip 
+                      label={(game.igdbDetails as any).franchiseDetails.name} 
+                      variant="outlined" 
+                      size="small" 
+                      color="secondary"
+                    />
+                  </Box>
+                )}
+
+                {(game.igdbDetails as any)?.gameTypeDetails && (
+                  <Box sx={{ mb: 1 }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      <strong>Game Type</strong>
+                    </Typography>
+                    <Chip 
+                      label={(game.igdbDetails as any).gameTypeDetails.type} 
+                      variant="outlined" 
+                      size="small" 
+                      color="info"
+                    />
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          </Box>
+
+          {/* Right Column - Detailed Information */}
+          <Box sx={{ 
+            flex: 1,
+            order: { xs: 1, lg: 2 }
+          }}>
+            <Stack spacing={2.5}>          {/* User Game Information - only show if not preview mode */}
+          {!isPreviewMode && (            <Card sx={{ 
+              background: (theme) => theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(103, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%)'
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              '& .MuiCardContent-root': { p: 3 }
+            }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom sx={{ 
+                  color: 'white',
+                  fontWeight: 600,
+                  mb: 2
+                }}>
+                  Your Collection Info
+                </Typography>
             
             {editing ? (
               <Stack spacing={2}>
@@ -362,58 +528,121 @@ export default function GameDetailDialog({
                   value={editedNotes}
                   onChange={(e) => setEditedNotes(e.target.value)}
                 />
-              </Stack>
-            ) : (
-              <Box>
-                <Typography variant="body1" gutterBottom>
-                  <strong>Status:</strong> 
+              </Stack>            ) : (
+              <Stack spacing={2}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
+                    Status:
+                  </Typography>
                   <Chip 
                     label={game.status} 
                     color={game.status === 'OWNED' ? 'success' : 'warning'} 
                     size="small" 
-                    sx={{ ml: 1 }}
+                    sx={{ fontWeight: 600 }}
                   />
-                </Typography>
+                </Box>
                 
-                {game.status === 'OWNED' && (
-                  <Typography variant="body1" gutterBottom>
-                    <strong>Condition:</strong> {formatCondition(game.condition)}
-                  </Typography>
+                {game.status === 'OWNED' && game.condition && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
+                      Condition:
+                    </Typography>
+                    <Chip 
+                      label={formatCondition(game.condition)} 
+                      variant="outlined" 
+                      size="small"
+                      sx={{ 
+                        borderColor: 'rgba(255,255,255,0.5)', 
+                        color: 'white',
+                        fontWeight: 500
+                      }}
+                    />
+                  </Box>
                 )}
-                
-                <Typography variant="body1" gutterBottom>
-                  <strong>Your Rating:</strong> {game.rating ? `${Math.round(game.rating)}/100` : 'Not rated'}
-                </Typography>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
+                    Your Rating:
+                  </Typography>
+                  <Chip 
+                    label={game.rating ? `${Math.round(game.rating)}/100` : 'Not rated'} 
+                    variant="outlined" 
+                    size="small"
+                    sx={{ 
+                      borderColor: 'rgba(255,255,255,0.5)', 
+                      color: 'white',
+                      fontWeight: 500
+                    }}
+                  />
+                </Box>
                 
                 {game.notes && (
-                  <Typography variant="body1" gutterBottom>
-                    <strong>Notes:</strong> {game.notes}
-                  </Typography>
+                  <Box>
+                    <Typography variant="body1" sx={{ color: 'white', fontWeight: 500, mb: 1 }}>
+                      Notes:
+                    </Typography>
+                    <Typography variant="body2" sx={{ 
+                      color: 'rgba(255,255,255,0.9)', 
+                      backgroundColor: 'rgba(255,255,255,0.1)',
+                      p: 1.5,
+                      borderRadius: 1,
+                      fontStyle: 'italic'
+                    }}>
+                      {game.notes}
+                    </Typography>
+                  </Box>
                 )}
-                  <Typography variant="body2" color="text.secondary">
-                  Added: {new Date(game.createdAt).toLocaleDateString()}
-                </Typography>
-              </Box>
-            )}
-            </Box>
-          )}
 
-          {/* Add Game Form for Preview Mode */}
-          {isPreviewMode && onGameAdded && platformId && (
-            <>
-              <Divider />
-              <Box>
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="body2" sx={{ 
+                  color: 'rgba(255,255,255,0.7)', 
+                  fontSize: '0.8rem',
+                  mt: 1
+                }}>
+                  Added: {new Date(game.createdAt).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </Typography>
+              </Stack>
+            )}
+              </CardContent>
+            </Card>
+          )}          {/* Add Game Form for Preview Mode */}
+          {isPreviewMode && onGameAdded && platformId && (            <Card sx={{ 
+              background: (theme) => theme.palette.mode === 'dark'
+                ? 'linear-gradient(135deg, rgba(17, 153, 142, 0.3) 0%, rgba(56, 239, 125, 0.3) 100%)'
+                : 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+              color: 'white'
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom sx={{ 
+                  color: 'white',
+                  fontWeight: 600,
+                  mb: 2
+                }}>
                   Add to Your Collection
                 </Typography>
                 
-                <Stack spacing={2}>
+                <Stack spacing={2.5}>
                   <FormControl fullWidth>
-                    <InputLabel>Status</InputLabel>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.8)' }}>Status</InputLabel>
                     <Select
                       value={addGameStatus}
                       label="Status"
                       onChange={(e) => setAddGameStatus(e.target.value as 'OWNED' | 'WISHLISTED')}
+                      sx={{
+                        color: 'white',
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'rgba(255,255,255,0.5)',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: 'rgba(255,255,255,0.8)',
+                        },
+                        '& .MuiSvgIcon-root': {
+                          color: 'white',
+                        },
+                      }}
                     >
                       <MenuItem value="OWNED">Owned</MenuItem>
                       <MenuItem value="WISHLISTED">Wishlisted</MenuItem>
@@ -422,11 +651,23 @@ export default function GameDetailDialog({
 
                   {addGameStatus === 'OWNED' && (
                     <FormControl fullWidth>
-                      <InputLabel>Condition</InputLabel>
+                      <InputLabel sx={{ color: 'rgba(255,255,255,0.8)' }}>Condition</InputLabel>
                       <Select
                         value={addGameCondition}
                         label="Condition"
                         onChange={(e) => setAddGameCondition(e.target.value)}
+                        sx={{
+                          color: 'white',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(255,255,255,0.5)',
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(255,255,255,0.8)',
+                          },
+                          '& .MuiSvgIcon-root': {
+                            color: 'white',
+                          },
+                        }}
                       >
                         <MenuItem value="SEALED">Sealed</MenuItem>
                         <MenuItem value="MINT">Mint</MenuItem>
@@ -440,43 +681,51 @@ export default function GameDetailDialog({
                     </FormControl>
                   )}
                 </Stack>
-              </Box>
-            </>
-          )}
-
-          {/* IGDB Information */}
+              </CardContent>
+            </Card>
+          )}          {/* IGDB Information */}
           {game.igdbDetails && (
-            <>
-              <Divider />
-              <Box>
-                <Typography variant="h6" gutterBottom>
+            <Card>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" gutterBottom color="primary" sx={{ 
+                  fontWeight: 600,
+                  mb: 2
+                }}>
                   Game Information (IGDB)
                 </Typography>
-                  {/* Cover Image */}
-                {(game.igdbDetails as any).coverDetails && (game.igdbDetails as any).coverDetails.image_id && (
-                  <Box sx={{ mb: 3, textAlign: 'center' }}>
-                    <img
-                      src={`https://images.igdb.com/igdb/image/upload/t_cover_big/${(game.igdbDetails as any).coverDetails.image_id}.jpg`}
-                      alt={`${game.name} cover`}
-                      style={{ 
-                        maxWidth: '200px', 
-                        maxHeight: '300px', 
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-                      }}
+                
+                {game.igdbDetails.rating && (
+                  <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      <strong>IGDB Rating:</strong>
+                    </Typography>
+                    <Chip 
+                      label={`${Math.round(game.igdbDetails.rating)}/100`} 
+                      color="primary" 
+                      size="small"
+                      sx={{ fontWeight: 600 }}
                     />
                   </Box>
                 )}
-                
-                {game.igdbDetails.rating && (
-                  <Typography variant="body1" gutterBottom>
-                    <strong>IGDB Rating:</strong> {Math.round(game.igdbDetails.rating)}/100
-                  </Typography>
-                )}
-                  {game.igdbDetails.storyline && game.igdbDetails.storyline.trim() && (
-                  <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
-                    <strong>Description:</strong> {game.igdbDetails.storyline}
-                  </Typography>
+
+                {game.igdbDetails.storyline && game.igdbDetails.storyline.trim() && (                  <Box sx={{ 
+                    mb: 3, 
+                    p: 2, 
+                    bgcolor: 'action.hover', 
+                    borderRadius: 2,
+                    borderLeft: 4,
+                    borderColor: 'primary.main'
+                  }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+                      Description
+                    </Typography>
+                    <Typography variant="body1" sx={{ 
+                      lineHeight: 1.6,
+                      fontStyle: 'italic'
+                    }}>
+                      {game.igdbDetails.storyline}
+                    </Typography>
+                  </Box>
                 )}{/* Genres */}
                 {(game.igdbDetails as any).genreDetails && (game.igdbDetails as any).genreDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
@@ -485,7 +734,13 @@ export default function GameDetailDialog({
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {(game.igdbDetails as any).genreDetails.map((genre: any) => (
-                        <Chip key={genre.igdbId} label={genre.name} size="small" variant="outlined" />
+                        <Chip 
+                          key={genre.igdbId} 
+                          label={genre.name} 
+                          size="small" 
+                          variant="outlined" 
+                          color="primary"
+                        />
                       ))}
                     </Box>
                   </Box>
@@ -499,7 +754,13 @@ export default function GameDetailDialog({
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                       {(game.igdbDetails as any).companyDetails.map((company: any) => (
-                        <Chip key={company.igdbId} label={company.name} size="small" variant="outlined" />
+                        <Chip 
+                          key={company.igdbId} 
+                          label={company.name} 
+                          size="small" 
+                          variant="outlined" 
+                          color="secondary"
+                        />
                       ))}
                     </Box>
                   </Box>
@@ -528,49 +789,82 @@ export default function GameDetailDialog({
                   </Box>
                 )}                {/* Screenshots */}
                 {(game.igdbDetails as any).screenshotDetails && (game.igdbDetails as any).screenshotDetails.length > 0 && (
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" gutterBottom>
-                      <strong>Screenshots:</strong>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                      Screenshots ({(game.igdbDetails as any).screenshotDetails.length})
                     </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                      {(game.igdbDetails as any).screenshotDetails.slice(0, 4).map((screenshot: any, index: number) => (
-                        <img
+                    <Box sx={{ 
+                      display: 'grid',
+                      gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' },
+                      gap: 1.5,
+                      mb: 2
+                    }}>
+                      {(game.igdbDetails as any).screenshotDetails.slice(0, 8).map((screenshot: any, index: number) => (                        <Box
                           key={screenshot.igdbId}
-                          src={`https://images.igdb.com/igdb/image/upload/t_thumb/${screenshot.image_id}.jpg`}
-                          alt="Game screenshot"
-                          style={{ 
-                            width: '100px', 
-                            height: '60px', 
-                            objectFit: 'cover',
-                            borderRadius: '4px',
+                          sx={{
+                            aspectRatio: '16/9',
                             cursor: 'pointer',
-                            border: '1px solid #e0e0e0',
-                            transition: 'transform 0.2s',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            border: '2px solid transparent',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              border: '2px solid',
+                              borderColor: 'primary.main',
+                              transform: 'scale(1.05)',
+                              boxShadow: '0 8px 16px rgba(0,0,0,0.15)'
+                            },
+                            '&:focus': {
+                              outline: '2px solid',
+                              outlineColor: 'primary.main',
+                              outlineOffset: '2px'
+                            }
                           }}
                           onClick={() => openGallery(index)}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.05)'
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              openGallery(index)
+                            }
                           }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)'
-                          }}
-                        />
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`View screenshot ${index + 1} in gallery`}
+                        >
+                          <img
+                            src={`https://images.igdb.com/igdb/image/upload/t_thumb/${screenshot.image_id}.jpg`}
+                            alt={`Screenshot ${index + 1}`}
+                            style={{ 
+                              width: '100%', 
+                              height: '100%', 
+                              objectFit: 'cover',
+                            }}
+                            loading="lazy"
+                          />
+                        </Box>
                       ))}
                     </Box>
-                    {(game.igdbDetails as any).screenshotDetails.length > 4 && (
-                      <Typography 
-                        variant="caption" 
-                        color="primary" 
-                        sx={{ 
-                          mt: 1, 
-                          display: 'block', 
-                          cursor: 'pointer',
-                          '&:hover': { textDecoration: 'underline' }
-                        }}
-                        onClick={() => openGallery(0)}
-                      >
-                        +{(game.igdbDetails as any).screenshotDetails.length - 4} more screenshots (click to view all)
-                      </Typography>                    )}
+                    <Typography 
+                      variant="caption" 
+                      color="primary" 
+                      sx={{ 
+                        display: 'block',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        p: 1,
+                        borderRadius: 1,
+                        backgroundColor: 'primary.main',
+                        color: 'white',
+                        fontWeight: 600,
+                        transition: 'background-color 0.2s',
+                        '&:hover': { 
+                          backgroundColor: 'primary.dark'
+                        }
+                      }}
+                      onClick={() => openGallery(0)}
+                    >
+                      View Full Gallery ({(game.igdbDetails as any).screenshotDetails.length} images)
+                    </Typography>
                   </Box>
                 )}
 
@@ -587,14 +881,13 @@ export default function GameDetailDialog({
                     <Typography variant="body2" gutterBottom>
                       <strong>Age Ratings:</strong>
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {(game.igdbDetails as any).ageRatingDetails.map((rating: any) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).ageRatingDetails.map((rating: any) => (
                         <Chip 
                           key={rating.igdbId} 
                           label={rating.categoryName || `Rating ${rating.igdbId}`} 
                           size="small" 
                           variant="outlined" 
-                          color="primary"
+                          color="warning"
                         />
                       ))}
                     </Box>
@@ -607,13 +900,13 @@ export default function GameDetailDialog({
                     <Typography variant="body2" gutterBottom>
                       <strong>Alternative Names:</strong>
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {(game.igdbDetails as any).alternativeNameDetails.map((altName: any) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).alternativeNameDetails.map((altName: any) => (
                         <Chip 
                           key={altName.igdbId} 
                           label={altName.name} 
                           size="small" 
                           variant="outlined" 
+                          color="info"
                         />
                       ))}
                     </Box>
@@ -632,62 +925,109 @@ export default function GameDetailDialog({
                           key={engine.igdbId} 
                           label={engine.name} 
                           size="small" 
-                          variant="outlined" 
-                          color="secondary"
+                          variant="outlined"
+                          color="success"
                         />
                       ))}
                     </Box>
                   </Box>
                 )}
-              </Box>
-            </>
-          )}
-
-          {!game.igdbGameId && (
-            <Alert severity="info">
+              </CardContent>
+            </Card>
+          )}          {!game.igdbGameId && (
+            <Alert 
+              severity="info" 
+              sx={{ 
+                borderRadius: 2,
+                '& .MuiAlert-message': {
+                  fontWeight: 500
+                }
+              }}
+            >
               This is a custom game not from IGDB. Only your personal information is available.
             </Alert>
           )}
-        </Stack>
-      </DialogContent>      <DialogActions>
+            </Stack>
+          </Box>
+        </Box>
+      </DialogContent>      <DialogActions sx={{ 
+        p: { xs: 2, md: 3 },
+        bgcolor: 'background.paper',
+        borderTop: 1,
+        borderColor: 'divider',
+        gap: 1
+      }}>
         {isPreviewMode ? (
           <>
-            <Button onClick={onClose} disabled={addingGame}>
+            <Button 
+              onClick={onClose} 
+              disabled={addingGame}
+              variant="outlined"
+              sx={{ minWidth: 120 }}
+            >
               Close Preview
             </Button>
             {onGameAdded && platformId && (
               <Button 
                 onClick={handleAddGameFromPreview} 
                 variant="contained" 
-                disabled={addingGame}
-                sx={{ ml: 1 }}
+                disabled={addingGame}                sx={{ 
+                  minWidth: 160,
+                  background: (theme) => theme.palette.mode === 'dark'
+                    ? 'linear-gradient(45deg, rgba(254, 107, 139, 0.4) 30%, rgba(255, 142, 83, 0.4) 90%)'
+                    : 'linear-gradient(45deg, #FE6B8B 30%, #FF8E53 90%)',
+                  '&:hover': {
+                    background: (theme) => theme.palette.mode === 'dark'
+                      ? 'linear-gradient(45deg, rgba(254, 107, 139, 0.6) 60%, rgba(255, 142, 83, 0.6) 100%)'
+                      : 'linear-gradient(45deg, #FE6B8B 60%, #FF8E53 100%)',
+                  }
+                }}
+                startIcon={addingGame ? <CircularProgress size={16} color="inherit" /> : null}
               >
-                {addingGame ? <CircularProgress size={20} /> : 'Add Game to Collection'}
+                {addingGame ? 'Adding...' : 'Add to Collection'}
               </Button>
             )}
           </>
         ) : editing ? (
           <>
-            <Button onClick={handleCancel} disabled={loading}>
+            <Button 
+              onClick={handleCancel} 
+              disabled={loading}
+              variant="outlined"
+              sx={{ minWidth: 100 }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleSave} variant="contained" disabled={loading}>
+            <Button 
+              onClick={handleSave} 
+              variant="contained" 
+              disabled={loading}
+              sx={{ minWidth: 120 }}
+              startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+            >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
           </>
         ) : (
           <>
-            <Button onClick={onClose}>
+            <Button 
+              onClick={onClose}
+              variant="outlined"
+              sx={{ minWidth: 100 }}
+            >
               Close
             </Button>
-            <Button onClick={handleEdit} variant="contained">
-              Edit            </Button>
+            <Button 
+              onClick={handleEdit} 
+              variant="contained"
+              sx={{ minWidth: 100 }}
+            >
+              Edit
+            </Button>
           </>
         )}
       </DialogActions>
-    </Dialog>
-
-    {/* Screenshot Gallery Modal */}
+    </Dialog>    {/* Screenshot Gallery Modal */}
     {game && (
       <Modal
         open={galleryOpen}
@@ -696,7 +1036,7 @@ export default function GameDetailDialog({
         BackdropComponent={Backdrop}
         BackdropProps={{
           timeout: 500,
-          sx: { backgroundColor: 'rgba(0, 0, 0, 0.9)' }
+          sx: { backgroundColor: 'rgba(0, 0, 0, 0.95)' }
         }}
       >
         <Box
@@ -705,12 +1045,12 @@ export default function GameDetailDialog({
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '90vw',
-            height: '90vh',
-            bgcolor: 'background.paper',
-            borderRadius: 2,
+            width: { xs: '100vw', md: '90vw' },
+            height: { xs: '100vh', md: '90vh' },
+            bgcolor: { xs: 'black', md: 'background.paper' },
+            borderRadius: { xs: 0, md: 2 },
             boxShadow: 24,
-            p: 2,
+            p: { xs: 0, md: 2 },
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden'
@@ -721,14 +1061,21 @@ export default function GameDetailDialog({
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center', 
-            mb: 2,
-            borderBottom: 1,
+            mb: { xs: 1, md: 2 },
+            borderBottom: { xs: 0, md: 1 },
             borderColor: 'divider',
-            pb: 2
-          }}>            <Typography variant="h6">
+            pb: { xs: 1, md: 2 },
+            px: { xs: 2, md: 0 },
+            bgcolor: { xs: 'rgba(0,0,0,0.8)', md: 'transparent' },
+            color: { xs: 'white', md: 'inherit' }
+          }}>
+            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
               Screenshots ({selectedImageIndex + 1}/{(game!.igdbDetails as any)?.screenshotDetails?.length || 0})
             </Typography>
-            <IconButton onClick={closeGallery}>
+            <IconButton 
+              onClick={closeGallery}
+              sx={{ color: { xs: 'white', md: 'inherit' } }}
+            >
               <CloseIcon />
             </IconButton>
           </Box>
@@ -740,7 +1087,8 @@ export default function GameDetailDialog({
             alignItems: 'center', 
             justifyContent: 'center',
             position: 'relative',
-            mb: 2
+            mb: { xs: 1, md: 2 },
+            px: { xs: 1, md: 0 }
           }}>
             {(game!.igdbDetails as any)?.screenshotDetails && (game!.igdbDetails as any).screenshotDetails.length > 0 && (
               <>
@@ -749,11 +1097,13 @@ export default function GameDetailDialog({
                   onClick={prevImage}
                   sx={{
                     position: 'absolute',
-                    left: 10,
+                    left: { xs: 5, md: 10 },
                     zIndex: 1,
-                    bgcolor: 'rgba(0, 0, 0, 0.5)',
+                    bgcolor: 'rgba(0, 0, 0, 0.7)',
                     color: 'white',
-                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' }
+                    width: { xs: 40, md: 48 },
+                    height: { xs: 40, md: 48 },
+                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' }
                   }}
                 >
                   <ChevronLeft />
@@ -767,7 +1117,7 @@ export default function GameDetailDialog({
                     maxWidth: '100%',
                     maxHeight: '100%',
                     objectFit: 'contain',
-                    borderRadius: '8px'
+                    borderRadius: isMobile ? '0' : '8px'
                   }}
                 />
 
@@ -776,11 +1126,13 @@ export default function GameDetailDialog({
                   onClick={nextImage}
                   sx={{
                     position: 'absolute',
-                    right: 10,
+                    right: { xs: 5, md: 10 },
                     zIndex: 1,
-                    bgcolor: 'rgba(0, 0, 0, 0.5)',
+                    bgcolor: 'rgba(0, 0, 0, 0.7)',
                     color: 'white',
-                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.7)' }
+                    width: { xs: 40, md: 48 },
+                    height: { xs: 40, md: 48 },
+                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' }
                   }}
                 >
                   <ChevronRight />
@@ -795,28 +1147,44 @@ export default function GameDetailDialog({
             gap: 1, 
             overflowX: 'auto', 
             py: 1,
-            borderTop: 1,
+            borderTop: { xs: 0, md: 1 },
             borderColor: 'divider',
-            pt: 2
+            pt: { xs: 1, md: 2 },
+            px: { xs: 2, md: 0 },
+            bgcolor: { xs: 'rgba(0,0,0,0.8)', md: 'transparent' },
+            '&::-webkit-scrollbar': {
+              height: 6,
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              borderRadius: 3,
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(255,255,255,0.3)',
+              borderRadius: 3,
+            },
           }}>
-            {(game!.igdbDetails as any)?.screenshotDetails?.map((screenshot: any, index: number) => (
-              <img
+            {(game!.igdbDetails as any)?.screenshotDetails?.map((screenshot: any, index: number) => (              <img
                 key={screenshot.igdbId}
                 src={`https://images.igdb.com/igdb/image/upload/t_thumb/${screenshot.image_id}.jpg`}
                 alt={`Thumbnail ${index + 1}`}
                 style={{
-                  width: '80px',
-                  height: '50px',
+                  width: isMobile ? '60px' : '80px',
+                  height: isMobile ? '35px' : '50px',
                   objectFit: 'cover',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  border: selectedImageIndex === index ? '3px solid #1976d2' : '1px solid #e0e0e0',
-                  flexShrink: 0
+                  border: selectedImageIndex === index 
+                    ? `3px solid ${theme.palette.primary.main}` 
+                    : `1px solid ${theme.palette.divider}`,
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease'
                 }}
                 onClick={() => setSelectedImageIndex(index)}
               />
             ))}
-          </Box>        </Box>
+          </Box>
+        </Box>
       </Modal>
     )}
     </>

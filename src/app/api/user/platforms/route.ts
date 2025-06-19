@@ -142,3 +142,44 @@ export async function POST(req: Request) {
     )
   }
 }
+
+export async function DELETE(req: Request) {
+  const user = await getUserFromToken(req)
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    const { platformId } = await req.json()
+
+    if (!platformId) {
+      return NextResponse.json(
+        { error: 'Platform ID is required' },
+        { status: 400 }
+      )
+    }
+
+    // Delete the user platform relationship
+    const deleted = await prisma.userPlatform.deleteMany({
+      where: {
+        userId: user.id,
+        platformId: parseInt(platformId)
+      }
+    })
+
+    if (deleted.count === 0) {
+      return NextResponse.json(
+        { error: 'Platform not found in collection' },
+        { status: 404 }
+      )
+    }
+
+    return NextResponse.json({ success: true, message: 'Platform removed from collection' })
+  } catch (error) {
+    console.error('Error removing platform:', error)
+    return NextResponse.json(
+      { error: 'Failed to remove platform' },
+      { status: 500 }
+    )
+  }
+}

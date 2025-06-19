@@ -23,9 +23,20 @@ import {
   MenuItem,
   Paper,
   Stack,
-  CircularProgress
+  CircularProgress,
+  Tooltip,
+  IconButton
 } from '@mui/material'
-import { ArrowBack, Star, StarBorder, Info } from '@mui/icons-material'
+import { 
+  ArrowBack, 
+  Star, 
+  StarBorder, 
+  Info, 
+  Remove,
+  Add,
+  ShoppingCart,
+  Delete
+} from '@mui/icons-material'
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 import PlatformDetailsModal from './PlatformDetailsModal'
@@ -67,6 +78,7 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [platformLoading, setPlatformLoading] = useState<Record<number, 'adding' | 'removing' | null>>({})
   const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null)
   const [showModal, setShowModal] = useState(false)
   
@@ -148,10 +160,11 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
     } catch (error) {
       setError('Failed to fetch data')
     } finally {
-      setLoading(false)
-    }
+      setLoading(false)    }
   }
+
   const addPlatform = async (platformId: number, status: 'OWNED' | 'WISHLISTED') => {
+    setPlatformLoading(prev => ({ ...prev, [platformId]: 'adding' }))
     try {
       const response = await fetch('/api/user/platforms', {
         method: 'POST',
@@ -167,8 +180,35 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
       } else {
         const data = await response.json()
         setError(data.error || 'Failed to add platform')
-      }    } catch (error) {
+      }
+    } catch (error) {
       setError('Failed to add platform')
+    } finally {
+      setPlatformLoading(prev => ({ ...prev, [platformId]: null }))
+    }
+  }
+  const removePlatform = async (platformId: number) => {
+    setPlatformLoading(prev => ({ ...prev, [platformId]: 'removing' }))
+    try {
+      const response = await fetch('/api/user/platforms', {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({ platformId })
+      })
+
+      if (response.ok) {
+        fetchData() // Refresh data
+      } else {
+        const data = await response.json()
+        setError(data.error || 'Failed to remove platform')
+      }
+    } catch (error) {
+      setError('Failed to remove platform')
+    } finally {
+      setPlatformLoading(prev => ({ ...prev, [platformId]: null }))
     }
   }
 
@@ -323,22 +363,24 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
               const displayName = platform.versionName || platform.name
               
               return (
-                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={platform.id}>
-                  <Card 
+                <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={platform.id}>                  <Card 
                     sx={{ 
                       height: '100%',
                       display: 'flex',
                       flexDirection: 'column',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
+                      backgroundColor: 'background.paper',
+                      border: '1px solid',
+                      borderColor: 'divider',
                       '&:hover': {
                         transform: 'translateY(-4px)',
-                        boxShadow: 4
+                        boxShadow: 4,
+                        borderColor: 'primary.main'
                       }
                     }}
                     onClick={() => handlePlatformClick(platform.id)}
-                  >
-                    {platform.imageUrl && (
+                  >{platform.imageUrl && (
                       <CardMedia
                         component="img"
                         height="160"
@@ -347,14 +389,14 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
                         sx={{ 
                           objectFit: 'contain', 
                           p: 2,
-                          backgroundColor: 'grey.50'
+                          backgroundColor: 'background.default'
                         }}
                       />
                     )}
                     {!platform.imageUrl && (
                       <Box sx={{ 
                         height: 160, 
-                        backgroundColor: 'grey.100',
+                        backgroundColor: 'action.hover',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -413,63 +455,105 @@ export default function BrowsePlatformsPage() {  const [user, setUser] = useStat
                         />
                       )}
                     </CardContent>
-                    
-                    <CardActions sx={{ pt: 0 }}>                      <Button 
-                        size="small" 
-                        startIcon={<Info />}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleShowDetails(platform.id, e)
-                        }}                      >
-                        Details
-                      </Button>
-                      <Button 
-                        size="small" 
-                        variant="text"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handlePlatformClick(platform.id)
-                        }}
-                      >
-                        View Games
-                      </Button>
-                      {!status && (
-                        <>
-                          <Button 
-                            size="small" 
-                            variant="contained"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              addPlatform(platform.id, 'OWNED')
-                            }}
-                          >
-                            Own
-                          </Button>
-                          <Button 
-                            size="small" 
-                            variant="outlined"
-                            startIcon={<StarBorder />}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              addPlatform(platform.id, 'WISHLISTED')
-                            }}
-                          >
-                            Wish
-                          </Button>
-                        </>
-                      )}
-                      {status === 'WISHLISTED' && (
-                        <Button 
-                          size="small" 
-                          variant="contained"
+                      <CardActions sx={{ pt: 0, justifyContent: 'space-between' }}>
+                      <Tooltip title="Platform Details">
+                        <IconButton 
+                          size="small"
                           onClick={(e) => {
                             e.stopPropagation()
-                            addPlatform(platform.id, 'OWNED')
+                            handleShowDetails(platform.id, e)
                           }}
                         >
-                          Move to Collection
-                        </Button>
-                      )}
+                          <Info />
+                        </IconButton>
+                      </Tooltip>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {!status && (
+                          <>
+                            <Tooltip title="Add to Collection">
+                              <IconButton 
+                                size="small"
+                                color="primary"
+                                disabled={platformLoading[platform.id] === 'adding'}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  addPlatform(platform.id, 'OWNED')
+                                }}
+                              >
+                                {platformLoading[platform.id] === 'adding' ? 
+                                  <CircularProgress size={16} /> : <Add />
+                                }
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Add to Wishlist">
+                              <IconButton 
+                                size="small"
+                                color="warning"
+                                disabled={platformLoading[platform.id] === 'adding'}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  addPlatform(platform.id, 'WISHLISTED')
+                                }}
+                              >
+                                {platformLoading[platform.id] === 'adding' ? 
+                                  <CircularProgress size={16} /> : <StarBorder />
+                                }
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                        {status === 'WISHLISTED' && (
+                          <>
+                            <Tooltip title="Move to Collection">
+                              <IconButton 
+                                size="small"
+                                color="primary"
+                                disabled={platformLoading[platform.id] === 'adding'}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  addPlatform(platform.id, 'OWNED')
+                                }}
+                              >
+                                {platformLoading[platform.id] === 'adding' ? 
+                                  <CircularProgress size={16} /> : <ShoppingCart />
+                                }
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Remove from Wishlist">
+                              <IconButton 
+                                size="small"
+                                color="error"
+                                disabled={platformLoading[platform.id] === 'removing'}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  removePlatform(platform.id)
+                                }}
+                              >
+                                {platformLoading[platform.id] === 'removing' ? 
+                                  <CircularProgress size={16} /> : <Delete />
+                                }
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                        {status === 'OWNED' && (
+                          <Tooltip title="Remove from Collection">
+                            <IconButton 
+                              size="small"
+                              color="error"
+                              disabled={platformLoading[platform.id] === 'removing'}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removePlatform(platform.id)
+                              }}
+                            >
+                              {platformLoading[platform.id] === 'removing' ? 
+                                <CircularProgress size={16} /> : <Delete />
+                              }
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
                     </CardActions>
                   </Card>
                 </Grid>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
+import { useTheme as useCustomTheme } from '../../contexts/ThemeContext'
 import {
   Drawer,
   List,
@@ -32,7 +33,9 @@ import {
   Computer,
   Menu,
   MenuOpen,
-  Settings
+  Settings,
+  Brightness4,
+  Brightness7
 } from '@mui/icons-material'
 
 interface DecodedToken {
@@ -58,6 +61,7 @@ interface MenuItem {
 
 export default function LeftMenu() {
   const router = useRouter()
+  const { mode, toggleTheme } = useCustomTheme()
   const [isOpen, setIsOpen] = useState(true)
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['catalog'])
   const [user, setUser] = useState<DecodedToken | null>(null)
@@ -184,21 +188,20 @@ export default function LeftMenu() {
         }}
       >
         {isOpen ? <MenuOpen /> : <Menu />}
-      </IconButton>
-
-      <Drawer
-        variant="persistent"
+      </IconButton>      <Drawer
+        variant="temporary"
         open={isOpen}
+        onClose={() => setIsOpen(false)}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile
+        }}
         sx={{
-          width: isOpen ? 280 : 0,
-          flexShrink: 0,
           '& .MuiDrawer-paper': {
             width: 280,
             boxSizing: 'border-box',
             backgroundColor: 'background.paper',
             borderRight: '1px solid',
             borderColor: 'divider',
-            transition: 'width 0.3s ease',
           },
         }}
       >
@@ -263,10 +266,25 @@ export default function LeftMenu() {
               )
             })}
           </List>
-        </Box>
-
-        {/* Logout */}
+        </Box>        {/* Theme Switcher & Logout */}
         <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
+          <ListItem disablePadding>
+            <Tooltip title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`} placement="right">
+              <ListItemButton onClick={toggleTheme} sx={{ py: 1.5 }}>
+                <ListItemIcon sx={{ minWidth: 40 }}>
+                  {mode === 'light' ? <Brightness4 /> : <Brightness7 />}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={`${mode === 'light' ? 'Dark' : 'Light'} Mode`}
+                  primaryTypographyProps={{ 
+                    variant: 'subtitle2',
+                    color: 'text.primary'
+                  }}
+                />
+              </ListItemButton>
+            </Tooltip>
+          </ListItem>
+          
           <ListItem disablePadding>
             <Tooltip title="Logout" placement="right">
               <ListItemButton onClick={handleLogout} sx={{ py: 1.5 }}>

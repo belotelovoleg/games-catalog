@@ -286,21 +286,43 @@ export default function AddGameDialog({ open, onClose, platformId, platform, onG
     resetForm()
     onClose()
   }
-
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>Add Game to {platform?.name}</DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: { 
+          borderRadius: 2,
+          minHeight: 500
+        }
+      }}
+    >
+      <DialogTitle sx={{ 
+        bgcolor: 'primary.main', 
+        color: 'primary.contrastText',
+        p: 3
+      }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Add Game to {platform?.name}
+        </Typography>
+      </DialogTitle>
       
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="add game tabs">
           <Tab label="From IGDB" />
           <Tab label="Custom Game" />
         </Tabs>
-      </Box>
-
-      <DialogContent sx={{ minHeight: 400 }}>
+      </Box>      <DialogContent sx={{ p: 3, minHeight: 400 }}>
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 2,
+              borderRadius: 2
+            }}
+          >
             {error}
           </Alert>
         )}
@@ -333,14 +355,13 @@ export default function AddGameDialog({ open, onClose, platformId, platform, onG
             <Box sx={{ mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Search Results
-              </Typography>              <List sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid #ddd', borderRadius: 1 }}>
+              </Typography>              <List sx={{ maxHeight: 300, overflow: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
                 {searchResults.map((game) => (
                   <ListItem 
                     key={game.igdbId} 
-                    disablePadding
-                    sx={{
+                    disablePadding                    sx={{
                       '&:hover': {
-                        bgcolor: 'grey.50'
+                        bgcolor: 'action.hover'
                       }
                     }}
                     secondaryAction={
@@ -395,7 +416,7 @@ export default function AddGameDialog({ open, onClose, platformId, platform, onG
           )}
 
           {selectedGame && (
-            <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 3 }}>
+            <Box sx={{ p: 2, bgcolor: 'action.selected', borderRadius: 1, mb: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Selected: {selectedGame.name}
               </Typography>
@@ -491,19 +512,31 @@ export default function AddGameDialog({ open, onClose, platformId, platform, onG
             </FormControl>
           )}
         </Box>
-      </DialogContent>
-
-      <DialogActions>
-        <Button onClick={handleClose} disabled={loading}>
+      </DialogContent>      <DialogActions sx={{ 
+        p: 3,
+        bgcolor: 'background.paper',
+        borderTop: 1,
+        borderColor: 'divider',
+        gap: 1
+      }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={loading}
+          variant="outlined"
+          sx={{ minWidth: 100 }}
+        >
           Cancel
         </Button>
         <Button
           onClick={tabValue === 0 ? handleAddIgdbGame : handleAddCustomGame}
           variant="contained"
           disabled={loading || (tabValue === 0 ? !selectedGame : !customName.trim())}
+          sx={{ minWidth: 120 }}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
         >
-          {loading ? <CircularProgress size={20} /> : 'Add Game'}
-        </Button>      </DialogActions>      {/* Use existing GameDetailDialog for preview */}
+          {loading ? 'Adding...' : 'Add Game'}
+        </Button>
+      </DialogActions>{/* Use existing GameDetailDialog for preview */}
       <GameDetailDialog
         open={previewOpen}
         onClose={handlePreviewClose}
