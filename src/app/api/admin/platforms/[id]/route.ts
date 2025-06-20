@@ -48,7 +48,7 @@ async function verifyAdmin(req: Request) {
 // GET /api/admin/platforms/[id] - Get specific platform
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await verifyAdmin(req)
   if (!user) {
@@ -56,7 +56,8 @@ export async function GET(
   }
 
   try {
-    const platformId = parseInt(params.id)
+    const { id } = await params
+    const platformId = parseInt(id)
     if (isNaN(platformId)) {
       return NextResponse.json({ error: 'Invalid platform ID' }, { status: 400 })
     }
@@ -82,7 +83,7 @@ export async function GET(
 // PUT /api/admin/platforms/[id] - Update platform
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await verifyAdmin(req)
   if (!user) {
@@ -90,7 +91,8 @@ export async function PUT(
   }
 
   try {
-    const platformId = parseInt(params.id)
+    const { id } = await params
+    const platformId = parseInt(id)
     if (isNaN(platformId)) {
       return NextResponse.json({ error: 'Invalid platform ID' }, { status: 400 })
     }
@@ -135,7 +137,7 @@ export async function PUT(
 // DELETE /api/admin/platforms/[id] - Delete platform
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await verifyAdmin(req)
   if (!user) {
@@ -143,7 +145,8 @@ export async function DELETE(
   }
 
   try {
-    const platformId = parseInt(params.id)
+    const { id } = await params
+    const platformId = parseInt(id)
     if (isNaN(platformId)) {
       return NextResponse.json({ error: 'Invalid platform ID' }, { status: 400 })
     }    // Check if platform exists

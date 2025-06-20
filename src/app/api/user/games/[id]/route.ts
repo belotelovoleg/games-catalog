@@ -28,7 +28,7 @@ async function getUserFromToken(req: Request) {
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUserFromToken(req)
   if (!user) {
@@ -36,7 +36,8 @@ export async function DELETE(
   }
 
   try {
-    const gameId = parseInt(params.id)
+    const { id } = await params
+    const gameId = parseInt(id)
     
     if (isNaN(gameId)) {
       return NextResponse.json({ error: 'Invalid game ID' }, { status: 400 })
@@ -71,7 +72,7 @@ export async function DELETE(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const user = await getUserFromToken(req)
   if (!user) {
@@ -79,7 +80,8 @@ export async function PUT(
   }
 
   try {
-    const gameId = parseInt(params.id)
+    const { id } = await params
+    const gameId = parseInt(id)
     
     if (isNaN(gameId)) {
       return NextResponse.json({ error: 'Invalid game ID' }, { status: 400 })
