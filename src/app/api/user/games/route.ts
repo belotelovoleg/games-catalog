@@ -30,9 +30,7 @@ export async function GET(req: Request) {
   const user = await getUserFromToken(req)
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  try {
+  }  try {
     const url = new URL(req.url)
     const platformId = url.searchParams.get('platformId')
     

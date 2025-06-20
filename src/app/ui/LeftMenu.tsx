@@ -139,15 +139,13 @@ export default function LeftMenu() {
       console.error('Logout error:', error)
     }
   }
-
   const menuGroups: MenuGroup[] = [
     {
       title: 'Catalog',
       icon: <Collections />,
       defaultOpen: true,
       items: [
-        { label: 'Browse Platforms', icon: <Search />, href: '/platforms/browse' },
-        { label: 'My Collection', icon: <VideogameAsset />, href: '/collection' },
+        { label: 'Gaming Collection', icon: <VideogameAsset />, href: '/' },
         { label: 'Search Games', icon: <Search />, href: '/games/search' },
       ]
     },

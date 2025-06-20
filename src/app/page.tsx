@@ -6,13 +6,21 @@ import {
   Container, 
   Typography, 
   Box,
-  Paper,
-  Button,
-  CircularProgress
+  Tabs,
+  Tab,
+  CircularProgress,
+  Alert
 } from '@mui/material'
-import { Construction, VideogameAsset } from '@mui/icons-material'
+import { VideogameAsset, GamepadOutlined } from '@mui/icons-material'
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
+import GameCardList from './components/GameCardList'
+import GameTableList from './components/GameTableList'
+import GameListFilters from './components/GameListFilters'
+import PlatformListFilters from './components/PlatformListFilters'
+import PlatformCardGrid from './components/PlatformCardGrid'
+import { useGameFilters } from './hooks/useGameFilters'
+import { usePlatformFilters } from './hooks/usePlatformFilters'
 
 interface DecodedToken {
   id: number
@@ -20,11 +28,81 @@ interface DecodedToken {
   isAdmin: boolean
 }
 
+interface Platform {
+  id: number
+  name: string
+  versionName?: string
+  abbreviation?: string
+  alternative_name?: string
+  generation?: number
+  familyName?: string
+  typeName?: string
+  imageUrl?: string
+  description?: string
+}
+
+interface UserPlatform {
+  id: number
+  platform: Platform
+  status: 'OWNED' | 'WISHLISTED'
+}
+
+interface GameWithIgdbDetails {
+  id: number
+  userId: number
+  platformId: number
+  igdbGameId: number | null
+  name: string
+  rating: number | null
+  status: 'OWNED' | 'WISHLISTED'
+  condition: 'MINT' | 'NEAR_MINT' | 'EXCELLENT' | 'VERY_GOOD' | 'GOOD' | 'FAIR' | 'POOR' | 'SEALED' | null
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+  platform?: {
+    id: number
+    name: string
+    abbreviation?: string
+    platform_logo_base64?: string
+  }
+  igdbDetails?: any
+}
+
 export default function HomePage() {
   const [user, setUser] = useState<DecodedToken | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [tabValue, setTabValue] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Games data and state
+  const [allUserGames, setAllUserGames] = useState<GameWithIgdbDetails[]>([])
+  const [gamesLoading, setGamesLoading] = useState(false)
+  
+  // Platform data and state
+  const [platforms, setPlatforms] = useState<Platform[]>([])
+  const [userPlatforms, setUserPlatforms] = useState<UserPlatform[]>([])
+  const [platformLoading, setPlatformLoading] = useState<Record<number, 'adding' | 'removing' | null>>({})
+  
   const router = useRouter()
 
+  // Game filters hook
+  const gameFilters = useGameFilters(allUserGames)
+
+  // Platform filters hook
+  const platformFilters = usePlatformFilters()
+
+  // Check if mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Auth check
   useEffect(() => {
     const token = Cookies.get('token')
     if (!token) {
@@ -44,9 +122,154 @@ export default function HomePage() {
     }
   }, [router])
 
+  // Fetch user games when user is loaded or tab changes to games
+  useEffect(() => {
+    if (user && tabValue === 0) {
+      fetchUserGames()
+    }
+  }, [user, tabValue])
+
+  // Fetch platforms when user is loaded or tab changes to platforms
+  useEffect(() => {
+    if (user && tabValue === 1) {
+      platformFilters.fetchFilterOptions()
+      fetchPlatformData()
+    }
+  }, [user, tabValue, platformFilters.searchTerm, platformFilters.selectedFamily, platformFilters.selectedType, platformFilters.selectedGeneration])
+
+  const fetchUserGames = async () => {
+    setGamesLoading(true)
+    try {
+      const [gamesRes, platformsRes] = await Promise.all([
+        fetch('/api/user/games', { credentials: 'include' }),
+        fetch('/api/platforms/browse', { credentials: 'include' })
+      ])
+      
+      if (gamesRes.ok && platformsRes.ok) {
+        const games = await gamesRes.json()
+        const platforms = await platformsRes.json()
+        
+        // Map platform data to games
+        const gamesWithPlatforms = games.map((game: any) => ({
+          ...game,
+          platform: platforms.find((p: any) => p.id === game.platformId)
+        }))
+        
+        setAllUserGames(gamesWithPlatforms)
+      } else {
+        setError('Failed to fetch games')
+      }
+    } catch (error) {
+      setError('Failed to fetch games')
+    } finally {
+      setGamesLoading(false)
+    }
+  }
+
+  const fetchPlatformData = async () => {
+    try {
+      const params = platformFilters.buildQueryParams()
+      const [platformsRes, userPlatformsRes] = await Promise.all([
+        fetch(`/api/platforms/browse?${params.toString()}`),
+        fetch('/api/user/platforms', { credentials: 'include' })
+      ])
+
+      if (platformsRes.ok) {
+        const platforms = await platformsRes.json()
+        setPlatforms(platforms)
+      }
+
+      if (userPlatformsRes.ok) {
+        const userPlatforms = await userPlatformsRes.json()
+        setUserPlatforms(userPlatforms)
+      }
+    } catch (error) {
+      setError('Failed to fetch platform data')
+    }
+  }
+
+  const handleGameClick = (game: GameWithIgdbDetails) => {
+    // You can implement a game detail modal or navigation here
+    console.log('Game clicked:', game)
+  }
+
+  const handleDeleteGame = async (gameId: number) => {
+    try {
+      const response = await fetch(`/api/user/games/${gameId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      })
+      if (response.ok) {
+        fetchUserGames() // Refresh games
+      } else {
+        setError('Failed to delete game')
+      }
+    } catch (error) {
+      setError('Failed to delete game')
+    }
+  }
+
+  const handlePlatformClick = (platformId: number) => {
+    router.push(`/platforms/${platformId}`)
+  }
+
+  const handleShowPlatformDetails = (platformId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    // You can implement platform details modal here
+    console.log('Platform details:', platformId)
+  }
+
+  const handleAddPlatform = async (platformId: number, status: 'OWNED' | 'WISHLISTED') => {
+    setPlatformLoading(prev => ({ ...prev, [platformId]: 'adding' }))
+    try {
+      const response = await fetch('/api/user/platforms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ platformId, status })
+      })
+
+      if (response.ok) {
+        fetchPlatformData() // Refresh data
+      } else {
+        setError('Failed to add platform')
+      }
+    } catch (error) {
+      setError('Failed to add platform')
+    } finally {
+      setPlatformLoading(prev => ({ ...prev, [platformId]: null }))
+    }
+  }
+
+  const handleRemovePlatform = async (platformId: number) => {
+    setPlatformLoading(prev => ({ ...prev, [platformId]: 'removing' }))
+    try {
+      const response = await fetch('/api/user/platforms', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ platformId })
+      })
+
+      if (response.ok) {
+        fetchPlatformData() // Refresh data
+      } else {
+        setError('Failed to remove platform')
+      }
+    } catch (error) {
+      setError('Failed to remove platform')
+    } finally {
+      setPlatformLoading(prev => ({ ...prev, [platformId]: null }))
+    }
+  }
+
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+    setTabValue(newValue)
+  }
+
   if (loading) {
     return (
-      <Container maxWidth="sm" sx={{ mt: 8, display: 'flex', justifyContent: 'center' }}>
+      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
         <CircularProgress />
       </Container>
     )
@@ -57,53 +280,125 @@ export default function HomePage() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 8 }}>
-      <Paper 
-        sx={{ 
-          p: 6, 
-          textAlign: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          borderRadius: 3
-        }}
-      >
-        <Construction sx={{ fontSize: 80, mb: 2, opacity: 0.8 }} />
-        
-        <Typography variant="h3" gutterBottom sx={{ fontWeight: 700 }}>
-          Under Construction
-        </Typography>
-        
-        <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-          We're building something awesome for your gaming collection!
-        </Typography>
-        
-        <Typography variant="body1" sx={{ mb: 4, maxWidth: 600, mx: 'auto', opacity: 0.8 }}>
-          This will be your central hub to view and manage your entire game collection across all platforms. 
-          For now, you can browse and manage your platforms using the navigation menu.
-        </Typography>
-        
-        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Button
-            variant="contained"
-            size="large"
-            startIcon={<VideogameAsset />}
-            onClick={() => router.push('/platforms/browse')}
-            sx={{
-              bgcolor: 'white',
-              color: 'primary.main',
-              fontWeight: 600,
-              '&:hover': {
-                bgcolor: 'grey.100',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 16px rgba(0,0,0,0.15)'
-              },
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Browse Platforms
-          </Button>
+    <Container maxWidth="lg" sx={{ mt: 4 }}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      
+      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+        Gaming Collection
+      </Typography>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={tabValue} onChange={handleTabChange} aria-label="collection tabs">
+          <Tab 
+            icon={<VideogameAsset />} 
+            label="My Games" 
+            iconPosition="start"
+            sx={{ minHeight: 64 }}
+          />
+          <Tab 
+            icon={<GamepadOutlined />} 
+            label="Browse Platforms" 
+            iconPosition="start"
+            sx={{ minHeight: 64 }}
+          />
+        </Tabs>
+      </Box>
+
+      {/* Games Tab */}
+      {tabValue === 0 && (
+        <Box>
+          {gamesLoading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+              <CircularProgress />
+            </Box>
+          ) : (
+            <>
+              <GameListFilters
+                searchQuery={gameFilters.searchQuery}
+                onSearchChange={gameFilters.setSearchQuery}
+                selectedStatus={gameFilters.selectedStatus}
+                onStatusChange={gameFilters.setSelectedStatus}
+                selectedGenre={gameFilters.selectedGenre}
+                onGenreChange={gameFilters.setSelectedGenre}
+                selectedFranchise={gameFilters.selectedFranchise}
+                onFranchiseChange={gameFilters.setSelectedFranchise}
+                selectedCompany={gameFilters.selectedCompany}
+                onCompanyChange={gameFilters.setSelectedCompany}
+                selectedMultiplayer={gameFilters.selectedMultiplayer}
+                onMultiplayerChange={gameFilters.setSelectedMultiplayer}
+                selectedPlatform={gameFilters.selectedPlatform}
+                onPlatformChange={gameFilters.setSelectedPlatform}
+                availableGenres={gameFilters.availableGenres}
+                availableFranchises={gameFilters.availableFranchises}
+                availableCompanies={gameFilters.availableCompanies}
+                availableMultiplayerModes={gameFilters.availableMultiplayerModes}
+                availablePlatforms={gameFilters.availablePlatforms}
+                onClearAll={gameFilters.clearAllFilters}
+                showPlatformFilter={true}
+              />
+
+              {gameFilters.filteredGames.length === 0 ? (
+                <Typography variant="h6" textAlign="center" sx={{ mt: 4, opacity: 0.7 }}>
+                  {allUserGames.length === 0 ? 'No games in your collection yet' : 'No games match your filters'}
+                </Typography>
+              ) : (
+                <>
+                  {isMobile ? (
+                    <GameCardList
+                      games={gameFilters.filteredGames}
+                      onGameClick={handleGameClick}
+                      onDeleteGame={handleDeleteGame}
+                      showPlatform={true}
+                    />
+                  ) : (
+                    <GameTableList
+                      games={gameFilters.filteredGames}
+                      onGameClick={handleGameClick}
+                      onDeleteGame={handleDeleteGame}
+                      showPlatform={true}
+                    />
+                  )}
+                </>
+              )}
+            </>
+          )}
         </Box>
-      </Paper>
+      )}
+
+      {/* Platforms Tab */}
+      {tabValue === 1 && (
+        <Box>
+          <PlatformListFilters
+            searchTerm={platformFilters.searchTerm}
+            selectedGeneration={platformFilters.selectedGeneration}
+            selectedFamily={platformFilters.selectedFamily}
+            selectedType={platformFilters.selectedType}
+            filterOptions={platformFilters.filterOptions}
+            resultCount={platforms.length}
+            onSearchChange={platformFilters.setSearchTerm}
+            onGenerationChange={platformFilters.setSelectedGeneration}
+            onFamilyChange={platformFilters.setSelectedFamily}
+            onTypeChange={platformFilters.setSelectedType}
+            onClearFilters={platformFilters.clearFilters}
+          />
+
+          {platforms.length === 0 ? (
+            <Typography variant="h6" textAlign="center" sx={{ mt: 4, opacity: 0.7 }}>
+              No platforms found with current filters
+            </Typography>
+          ) : (
+            <PlatformCardGrid
+              platforms={platforms}
+              userPlatforms={userPlatforms}
+              platformLoading={platformLoading}
+              onPlatformClick={handlePlatformClick}
+              onShowDetails={handleShowPlatformDetails}
+              onAddPlatform={handleAddPlatform}
+              onRemovePlatform={handleRemovePlatform}
+            />
+          )}
+        </Box>
+      )}
     </Container>
   )
 }

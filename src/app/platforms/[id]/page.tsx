@@ -6,23 +6,14 @@ import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 import {
   Container,
-  Typography,  Box,
+  Typography,
+  Box,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   Chip,
   IconButton,
-  Dialog,
   CircularProgress,
-  Alert,  Card,
-  CardContent,
-  CardActions,
-  Stack,
+  Alert,
   useTheme,
   useMediaQuery,
   TextField,
@@ -32,9 +23,11 @@ import {
   Select,
   MenuItem
 } from '@mui/material'
-import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material'
+import { Add as AddIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material'
 import GameDetailDialog from '../../ui/GameDetailDialog'
 import AddGameDialog from '../../ui/AddGameDialog'
+import GameTableList from '../../components/GameTableList'
+import GameCardList from '../../components/GameCardList'
 
 interface UserGame {
   id: number
@@ -388,7 +381,6 @@ export default function PlatformGamesPage() {  const params = useParams()
   const handleAddGame = () => {
     setAddGameOpen(true)
   }
-
   const handleGameAdded = () => {
     setAddGameOpen(false)
     fetchPlatformAndGames() // Refresh the games list
@@ -399,34 +391,17 @@ export default function PlatformGamesPage() {  const params = useParams()
       const response = await fetch(`/api/user/games/${gameId}`, {
         method: 'DELETE'
       })
-      
+
       if (response.ok) {
-        fetchPlatformAndGames() // Refresh the games list
+        setUserGames(prev => prev.filter(game => game.id !== gameId))
       } else {
-        setError('Failed to delete game')
+        console.error('Failed to delete game')
+        // Handle error - maybe show a toast notification
       }
-    } catch (err) {
-      setError('Failed to delete game')
-    }
-  }
+    } catch (error) {
+      console.error('Error deleting game:', error)
+    }  }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'OWNED': return 'success'
-      case 'WISHLISTED': return 'primary'
-      default: return 'default'
-    }
-  }
-
-  const getConditionColor = (condition: string) => {
-    switch (condition) {
-      case 'NEW': return 'success'
-      case 'USED': return 'warning'
-      case 'DAMAGED': return 'error'
-      case 'BROKEN': return 'error'
-      default: return 'default'
-    }
-  }
   if (!user || loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
@@ -774,482 +749,24 @@ export default function PlatformGamesPage() {  const params = useParams()
             startIcon={<AddIcon />}
             onClick={handleAddGame}
           >
-            Add New Game
-          </Button>
+            Add New Game          </Button>
         </Paper>
       ) : isMobile ? (
         // Mobile Card Layout
-        <Stack spacing={2}>
-          {filteredGames.map((game) => (<Card 
-              key={game.id}
-              sx={{ 
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                backgroundColor: theme.palette.mode === 'dark' ? 'grey.800' : 'background.paper',
-                '&:hover': {
-                  transform: 'translateY(-2px)',
-                  boxShadow: theme.palette.mode === 'dark' ? 
-                    '0 4px 20px rgba(255, 255, 255, 0.1)' : 
-                    '0 4px 20px rgba(0, 0, 0, 0.1)',
-                }
-              }}
-              onClick={() => handleGameClick(game)}
-            >
-              <CardContent>                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, flex: 1 }}>
-                    {game.name}
-                  </Typography>
-                  <Chip
-                    label={game.status}
-                    color={getStatusColor(game.status) as any}
-                    size="small"
-                    onClick={() => {}}
-                  />
-                </Box>
-                  <Stack spacing={1}>
-                  {/* Alternative Names */}
-                  {game.igdbDetails?.alternativeNameDetails && game.igdbDetails.alternativeNameDetails.length > 0 && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" component="span">
-                        Also known as: 
-                      </Typography>
-                      <Typography variant="body2" component="span" sx={{ ml: 1, fontStyle: 'italic' }}>
-                        {game.igdbDetails.alternativeNameDetails.slice(0, 3).map(altName => altName.name).join(', ')}
-                        {game.igdbDetails.alternativeNameDetails.length > 3 && '...'}
-                      </Typography>
-                    </Box>
-                  )}
-                  
-                  {game.condition && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" component="span">
-                        Condition: 
-                      </Typography>                      <Chip
-                        label={game.condition.replace('_', ' ')}
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {}}
-                        sx={{ ml: 1 }}
-                      />
-                    </Box>                  )}
-                    {/* Genres */}
-                  {game.igdbDetails?.genreDetails && game.igdbDetails.genreDetails.length > 0 && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" component="span">
-                        Genres: 
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                        {game.igdbDetails.genreDetails.slice(0, 4).map((genre) => (
-                          <Chip 
-                            key={genre.igdbId}
-                            label={genre.name} 
-                            size="small" 
-                            variant="outlined" 
-                            color="primary"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedGenre(genre.name)
-                            }}
-                            sx={{ 
-                              cursor: 'pointer',
-                              '&:hover': {
-                                backgroundColor: 'primary.light',
-                                color: 'primary.contrastText'
-                              }
-                            }}
-                          />
-                        ))}
-                        {game.igdbDetails.genreDetails.length > 4 && (
-                          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
-                            +{game.igdbDetails.genreDetails.length - 4} more
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  )}
-                  
-                  {/* Franchise */}
-                  {game.igdbDetails?.franchiseDetails && (
-                    <Box>
-                      <Chip 
-                        label={`📚 ${game.igdbDetails.franchiseDetails.name}`} 
-                        size="small" 
-                        variant="outlined" 
-                        color="secondary"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          if (game.igdbDetails?.franchiseDetails?.name) {
-                            setSelectedFranchise(game.igdbDetails.franchiseDetails.name)
-                          }
-                        }}
-                        sx={{ 
-                          cursor: 'pointer',
-                          '&:hover': {
-                            backgroundColor: 'secondary.light',
-                            color: 'secondary.contrastText'
-                          }
-                        }}
-                      />
-                    </Box>
-                  )}
-                  
-                  {/* Companies */}
-                  {game.igdbDetails?.companyDetails && game.igdbDetails.companyDetails.length > 0 && (
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" component="span">
-                        Companies: 
-                      </Typography>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                        {game.igdbDetails.companyDetails.slice(0, 3).map((company) => (
-                          <Chip 
-                            key={company.igdbId}
-                            label={company.name} 
-                            size="small" 
-                            variant="outlined" 
-                            color="info"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedCompany(company.name)
-                            }}
-                            sx={{ 
-                              cursor: 'pointer',
-                              '&:hover': {
-                                backgroundColor: 'info.light',
-                                color: 'info.contrastText'
-                              }
-                            }}
-                          />
-                        ))}
-                        {game.igdbDetails.companyDetails.length > 3 && (
-                          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
-                            +{game.igdbDetails.companyDetails.length - 3} more
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  )}
-
-                  {game.igdbDetails?.franchise && (
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Franchise:</strong> Available in details
-                    </Typography>
-                  )}
-                  
-                  {game.rating && (
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Rating:</strong> {Math.round(game.rating)}/100
-                    </Typography>
-                  )}
-                </Stack>
-              </CardContent>
-              
-              <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDeleteGame(game.id)
-                  }}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </CardActions>
-            </Card>
-          ))}
-        </Stack>
+        <GameCardList
+          games={filteredGames}
+          onGameClick={handleGameClick}
+          onDeleteGame={handleDeleteGame}
+          showPlatform={false}
+        />
       ) : (
         // Desktop Table Layout
-        <TableContainer 
-          component={Paper} 
-          sx={{ 
-            borderRadius: 2, 
-            overflow: 'hidden',
-            backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.paper'
-          }}
-        >
-          <Table>
-            <TableHead sx={{ 
-              bgcolor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100'
-            }}>
-                <TableRow>
-                <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Details</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Rating</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredGames.map((game) => (
-                <TableRow
-                  key={game.id}
-                  hover
-                  sx={{ 
-                    cursor: 'pointer',
-                    '&:hover': {
-                      backgroundColor: 'action.hover'
-                    }
-                  }}
-                  onClick={() => handleGameClick(game)}
-                >
-                <TableCell>
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {game.name}
-                      </Typography>
-                      {/* Alternative Names */}
-                      {game.igdbDetails?.alternativeNameDetails && game.igdbDetails.alternativeNameDetails.length > 0 && (
-                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mb: 0.5 }}>
-                          Also: {game.igdbDetails.alternativeNameDetails.slice(0, 2).map(altName => altName.name).join(', ')}
-                          {game.igdbDetails.alternativeNameDetails.length > 2 && '...'}
-                        </Typography>
-                      )}                      {game.condition && (
-                        <Chip
-                          label={game.condition.replace('_', ' ')}
-                          size="small"
-                          variant="outlined"
-                          onClick={() => {}}
-                        />
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={game.status}
-                      color={getStatusColor(game.status) as any}
-                      size="small"
-                      onClick={() => {}}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Stack spacing={1}>
-                      {/* Genres */}
-                      {game.igdbDetails?.genreDetails && game.igdbDetails.genreDetails.length > 0 && (
-                        <Box>
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                            {game.igdbDetails.genreDetails.slice(0, 3).map((genre) => (
-                              <Chip 
-                                key={genre.igdbId}
-                                label={genre.name} 
-                                size="small" 
-                                variant="outlined" 
-                                color="primary"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedGenre(genre.name)
-                                }}
-                                sx={{ 
-                                  cursor: 'pointer',
-                                  '&:hover': {
-                                    backgroundColor: 'primary.light',
-                                    color: 'primary.contrastText'
-                                  }
-                                }}
-                              />
-                            ))}
-                            {game.igdbDetails.genreDetails.length > 3 && (
-                              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                                +{game.igdbDetails.genreDetails.length - 3}
-                              </Typography>
-                            )}
-                          </Stack>
-                        </Box>
-                      )}
-                        {/* Franchise */}
-                      {game.igdbDetails?.franchiseDetails && (
-                        <Chip 
-                          label={`📚 ${game.igdbDetails.franchiseDetails.name}`} 
-                          size="small" 
-                          variant="outlined" 
-                          color="secondary"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (game.igdbDetails?.franchiseDetails?.name) {
-                              setSelectedFranchise(game.igdbDetails.franchiseDetails.name)
-                            }
-                          }}
-                          sx={{ 
-                            cursor: 'pointer',
-                            maxWidth: 'fit-content',
-                            '&:hover': {
-                              backgroundColor: 'secondary.light',
-                              color: 'secondary.contrastText'
-                            }
-                          }}
-                        />
-                      )}
-                      
-                      {/* Companies */}
-                      {game.igdbDetails?.companyDetails && game.igdbDetails.companyDetails.length > 0 && (
-                        <Box>
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                            {game.igdbDetails.companyDetails.slice(0, 2).map((company) => (
-                              <Chip 
-                                key={company.igdbId}
-                                label={`🏢 ${company.name}`} 
-                                size="small" 
-                                variant="outlined" 
-                                color="info"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setSelectedCompany(company.name)
-                                }}
-                                sx={{ 
-                                  cursor: 'pointer',
-                                  '&:hover': {
-                                    backgroundColor: 'info.light',
-                                    color: 'info.contrastText'
-                                  }
-                                }}
-                              />
-                            ))}
-                            {game.igdbDetails.companyDetails.length > 2 && (
-                              <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
-                                +{game.igdbDetails.companyDetails.length - 2}
-                              </Typography>
-                            )}
-                          </Stack>
-                        </Box>
-                      )}
-                      
-                      {/* Multiplayer Modes */}
-                      {game.igdbDetails?.multiplayerModeDetails && game.igdbDetails.multiplayerModeDetails.length > 0 && (
-                        <Box>
-                          <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                            {game.igdbDetails.multiplayerModeDetails.map((mode, index) => (
-                              <Box key={index}>
-                                {mode.lancoop && (
-                                  <Chip 
-                                    label="🔗 LAN Co-op" 
-                                    size="small" 
-                                    variant="outlined" 
-                                    color="success"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setSelectedMultiplayer('LAN Co-op')
-                                    }}
-                                    sx={{ 
-                                      cursor: 'pointer',
-                                      mr: 0.5,
-                                      mb: 0.5,
-                                      '&:hover': {
-                                        backgroundColor: 'success.light',
-                                        color: 'success.contrastText'
-                                      }
-                                    }}
-                                  />
-                                )}
-                                {mode.offlinecoop && (
-                                  <Chip 
-                                    label="👥 Offline Co-op" 
-                                    size="small" 
-                                    variant="outlined" 
-                                    color="success"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setSelectedMultiplayer('Offline Co-op')
-                                    }}
-                                    sx={{ 
-                                      cursor: 'pointer',
-                                      mr: 0.5,
-                                      mb: 0.5,
-                                      '&:hover': {
-                                        backgroundColor: 'success.light',
-                                        color: 'success.contrastText'
-                                      }
-                                    }}
-                                  />
-                                )}
-                                {mode.onlinecoop && (
-                                  <Chip 
-                                    label="🌐 Online Co-op" 
-                                    size="small" 
-                                    variant="outlined" 
-                                    color="success"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setSelectedMultiplayer('Online Co-op')
-                                    }}
-                                    sx={{ 
-                                      cursor: 'pointer',
-                                      mr: 0.5,
-                                      mb: 0.5,
-                                      '&:hover': {
-                                        backgroundColor: 'success.light',
-                                        color: 'success.contrastText'
-                                      }
-                                    }}
-                                  />
-                                )}
-                                {mode.splitscreen && (
-                                  <Chip 
-                                    label="📺 Split Screen" 
-                                    size="small" 
-                                    variant="outlined" 
-                                    color="success"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setSelectedMultiplayer('Split Screen')
-                                    }}
-                                    sx={{ 
-                                      cursor: 'pointer',
-                                      mr: 0.5,
-                                      mb: 0.5,
-                                      '&:hover': {
-                                        backgroundColor: 'success.light',
-                                        color: 'success.contrastText'
-                                      }
-                                    }}
-                                  />
-                                )}
-                              </Box>
-                            ))}
-                          </Stack>
-                        </Box>
-                      )}
-                        {/* Custom Game indicator */}
-                      {!game.igdbGameId && (
-                        <Chip label="📝 Custom Game" size="small" variant="outlined" color="warning" onClick={() => {}} />
-                      )}
-                    </Stack>
-                  </TableCell>
-                  <TableCell>
-                    {game.rating ? (
-                      <Chip 
-                        label={`${Math.round(game.rating)}/100`} 
-                        size="small" 
-                        color="primary"
-                        variant="outlined"
-                        onClick={() => {}}
-                      />
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">-</Typography>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDeleteGame(game.id)
-                      }}
-                      sx={{
-                        '&:hover': {
-                          backgroundColor: 'error.light',
-                          color: 'error.contrastText'
-                        }
-                      }}
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <GameTableList
+          games={filteredGames}
+          onGameClick={handleGameClick}
+          onDeleteGame={handleDeleteGame}
+          showPlatform={false}
+        />
       )}
 
       {/* Game Detail Dialog */}
