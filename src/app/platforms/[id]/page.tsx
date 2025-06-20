@@ -149,11 +149,11 @@ export default function PlatformGamesPage() {  const params = useParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [user, setUser] = useState<DecodedToken | null>(null)
-  
-  // Dialog states
+    // Dialog states
   const [gameDetailOpen, setGameDetailOpen] = useState(false)
   const [addGameOpen, setAddGameOpen] = useState(false)
   const [selectedGame, setSelectedGame] = useState<GameWithIgdbDetails | null>(null)
+  const [gameDetailLoading, setGameDetailLoading] = useState(false)
 
   // Authentication check
   useEffect(() => {
@@ -354,28 +354,34 @@ export default function PlatformGamesPage() {  const params = useParams()
     } catch (err) {
       console.error('Fetch error:', err)
       setError(err instanceof Error ? err.message : 'Failed to load platform data')
-    } finally {
-      setLoading(false)
+    } finally {      setLoading(false)
     }
   }
+  
   const handleGameClick = async (game: GameWithIgdbDetails) => {
-    let gameWithDetails = game
+    // Prevent multiple clicks while loading
+    if (gameDetailLoading) return
+    
+    // Open modal immediately with basic game data
+    setSelectedGame(game)
+    setGameDetailOpen(true)
     
     // If the game has IGDB ID, fetch additional details
     if (game.igdbGameId) {
+      setGameDetailLoading(true)
       try {
         const response = await fetch(`/api/igdb/games/${game.igdbGameId}`)
         if (response.ok) {
           const igdbDetails = await response.json()
-          gameWithDetails = { ...game, igdbDetails }
+          const gameWithDetails = { ...game, igdbDetails }
+          setSelectedGame(gameWithDetails)
         }
       } catch (err) {
         console.error('Failed to fetch IGDB details:', err)
+      } finally {
+        setGameDetailLoading(false)
       }
     }
-    
-    setSelectedGame(gameWithDetails)
-    setGameDetailOpen(true)
   }
 
   const handleAddGame = () => {
@@ -770,11 +776,14 @@ export default function PlatformGamesPage() {  const params = useParams()
       )}
 
       {/* Game Detail Dialog */}
-      <GameDetailDialog
-        open={gameDetailOpen}
-        onClose={() => setGameDetailOpen(false)}
+      <GameDetailDialog        open={gameDetailOpen}
+        onClose={() => {
+          setGameDetailOpen(false)
+          setGameDetailLoading(false) // Reset loading state when closing
+        }}
         game={selectedGame}
         onGameUpdated={fetchPlatformAndGames}
+        loadingDetails={gameDetailLoading}
       />
 
       {/* Add Game Dialog */}

@@ -161,7 +161,7 @@ export default function GameTableList({
                 }
               }}
               onClick={() => onGameClick(game)}
-            >                <TableCell>
+            ><TableCell>
                   <Box>
                     <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                       {game.name}

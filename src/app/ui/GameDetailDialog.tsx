@@ -120,6 +120,7 @@ interface GameDetailDialogProps {
   onGameUpdated: () => void
   onGameAdded?: () => void // For preview mode
   platformId?: number // For adding games from preview
+  loadingDetails?: boolean // For showing loading state while fetching IGDB details
 }
 
 export default function GameDetailDialog({ 
@@ -128,7 +129,8 @@ export default function GameDetailDialog({
   game,
   onGameUpdated,
   onGameAdded,
-  platformId
+  platformId,
+  loadingDetails = false
 }: GameDetailDialogProps) {
   const theme = useTheme()
   const [editing, setEditing] = useState(false)
@@ -343,13 +345,41 @@ export default function GameDetailDialog({
         overflow: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%'
-      }}>
+        height: '100%',
+        position: 'relative'
+      }}>        {/* Loading Overlay */}
+        {loadingDetails && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                ? 'rgba(18, 18, 18, 0.9)' 
+                : 'rgba(255, 255, 255, 0.9)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              flexDirection: 'column',
+              gap: 2
+            }}
+          >
+            <CircularProgress size={60} />
+            <Typography variant="body1" color="text.primary">
+              Loading game details...
+            </Typography>
+          </Box>
+        )}
+
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
           </Alert>
-        )}        <Box sx={{ 
+        )}<Box sx={{ 
           display: 'flex', 
           flexDirection: { xs: 'column', lg: 'row' },
           gap: { xs: 2, md: 3 }

@@ -19,6 +19,7 @@ import GameTableList from './components/GameTableList'
 import GameListFilters from './components/GameListFilters'
 import PlatformListFilters from './components/PlatformListFilters'
 import PlatformCardGrid from './components/PlatformCardGrid'
+import GameDetailDialog from './ui/GameDetailDialog'
 import { useGameFilters } from './hooks/useGameFilters'
 import { usePlatformFilters } from './hooks/usePlatformFilters'
 
@@ -74,6 +75,10 @@ export default function HomePage() {
   const [error, setError] = useState('')
   const [tabValue, setTabValue] = useState(0)
   const [isMobile, setIsMobile] = useState(false)
+    // Game detail dialog state
+  const [gameDetailOpen, setGameDetailOpen] = useState(false)
+  const [selectedGame, setSelectedGame] = useState<GameWithIgdbDetails | null>(null)
+  const [gameDetailLoading, setGameDetailLoading] = useState(false)
   
   // Games data and state
   const [allUserGames, setAllUserGames] = useState<GameWithIgdbDetails[]>([])
@@ -187,10 +192,30 @@ export default function HomePage() {
       setError('Failed to fetch platform data')
     }
   }
-
-  const handleGameClick = (game: GameWithIgdbDetails) => {
-    // You can implement a game detail modal or navigation here
-    console.log('Game clicked:', game)
+  const handleGameClick = async (game: GameWithIgdbDetails) => {
+    // Prevent multiple clicks while loading
+    if (gameDetailLoading) return
+    
+    // Open modal immediately with basic game data
+    setSelectedGame(game)
+    setGameDetailOpen(true)
+    
+    // If the game has IGDB ID, fetch additional details
+    if (game.igdbGameId) {
+      setGameDetailLoading(true)
+      try {
+        const response = await fetch(`/api/igdb/games/${game.igdbGameId}`)
+        if (response.ok) {
+          const igdbDetails = await response.json()
+          const gameWithDetails = { ...game, igdbDetails }
+          setSelectedGame(gameWithDetails)
+        }
+      } catch (err) {
+        console.error('Failed to fetch IGDB details:', err)
+      } finally {
+        setGameDetailLoading(false)
+      }
+    }
   }
 
   const handleDeleteGame = async (gameId: number) => {
@@ -395,10 +420,20 @@ export default function HomePage() {
               onShowDetails={handleShowPlatformDetails}
               onAddPlatform={handleAddPlatform}
               onRemovePlatform={handleRemovePlatform}
-            />
-          )}
+            />          )}
         </Box>
       )}
+      
+      {/* Game Detail Dialog */}      <GameDetailDialog
+        open={gameDetailOpen}
+        onClose={() => {
+          setGameDetailOpen(false)
+          setGameDetailLoading(false) // Reset loading state when closing
+        }}
+        game={selectedGame}
+        onGameUpdated={fetchUserGames}
+        loadingDetails={gameDetailLoading}
+      />
     </Container>
   )
 }
