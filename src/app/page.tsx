@@ -305,11 +305,9 @@ export default function HomePage() {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      
-      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-        Gaming Collection
+    <Container maxWidth="lg" sx={{ mt: 4 }}>      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Typography variant="h4" gutterBottom sx={{ mb: 3, textAlign: 'center' }}>
+        Game Catalog
       </Typography>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>

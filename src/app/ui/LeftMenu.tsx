@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
 import { jwtDecode } from 'jwt-decode'
 import { useTheme as useCustomTheme } from '../../contexts/ThemeContext'
+import { useLanguage } from '../../contexts/LanguageContext'
+import LanguageSwitcher from '../../components/LanguageSwitcher'
 import {
   Drawer,
   List,
@@ -19,7 +21,7 @@ import {
   Divider,
   IconButton,
   Tooltip
-} from '@mui/material'
+}from '@mui/material'
 import {
   Dashboard,
   VideogameAsset,
@@ -35,8 +37,9 @@ import {
   MenuOpen,
   Settings,
   Brightness4,
-  Brightness7
-} from '@mui/icons-material'
+  Brightness7,
+  Language
+}from '@mui/icons-material'
 
 interface DecodedToken {
   id: number
@@ -62,7 +65,8 @@ interface MenuItem {
 export default function LeftMenu() {
   const router = useRouter()
   const { mode, toggleTheme } = useCustomTheme()
-  const [isOpen, setIsOpen] = useState(true)
+  const { t } = useLanguage()
+  const [isOpen, setIsOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['catalog'])
   const [user, setUser] = useState<DecodedToken | null>(null)
   const toggleButtonRef = useRef<HTMLButtonElement>(null)
@@ -137,27 +141,26 @@ export default function LeftMenu() {
       router.push('/login')
     } catch (error) {
       console.error('Logout error:', error)
-    }
-  }
+    }  }
+  
   const menuGroups: MenuGroup[] = [
     {
-      title: 'Catalog',
+      title: t('leftmenu_group_catalog'),
       icon: <Collections />,
       defaultOpen: true,
       items: [
-        { label: 'Gaming Collection', icon: <VideogameAsset />, href: '/' },
-        { label: 'Search Games', icon: <Search />, href: '/games/search' },
+        { label: t('leftmenu_item_gamecatalog'), icon: <VideogameAsset />, href: '/' },
       ]
     },
     {
-      title: 'Admin',
+      title: t('leftmenu_group_admin'),
       icon: <AdminPanelSettings />,
       defaultOpen: false,
       adminOnly: true,
       items: [
-        { label: 'Platform Management', icon: <Dashboard />, href: '/admin/platforms', adminOnly: true },
-        { label: 'User Management', icon: <People />, href: '/admin/users', adminOnly: true },
-        { label: 'IGDB Sync Manager', icon: <Settings />, href: '/admin/igdb-sync', adminOnly: true },
+        { label: t('leftmenu_item_platforms'), icon: <Dashboard />, href: '/admin/platforms', adminOnly: true },
+        { label: t('leftmenu_item_users'), icon: <People />, href: '/admin/users', adminOnly: true },
+        { label: t('leftmenu_item_igdbsync'), icon: <Settings />, href: '/admin/igdb-sync', adminOnly: true },
       ]
     }
   ]
@@ -178,10 +181,10 @@ export default function LeftMenu() {
   }
 
   return (
-    <>      {/* Toggle Button - Fixed position */}
-      <IconButton
+    <>      {/* Toggle Button - Fixed position */}      <IconButton
         ref={toggleButtonRef}
         onClick={toggleMenu}
+        aria-label={t('leftmenu_tooltip_menu')}
         sx={{
           position: 'fixed',
           top: 16,
@@ -213,14 +216,13 @@ export default function LeftMenu() {
             borderColor: 'divider',
           },
         }}
-      >
-        {/* Header */}
+      >        {/* Header */}
         <Box sx={{ p: 2, pt: 8, backgroundColor: 'primary.main', color: 'primary.contrastText' }}>
           <Typography variant="h6" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
             <VideogameAsset />
-            Gaming Catalog
+            {t('leftmenu_app_title')}
           </Typography>
-        </Box>        {/* Menu Groups */}
+        </Box>{/* Menu Groups */}
         <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
           <List disablePadding>
             {visibleMenuGroups.map((group) => {
@@ -276,15 +278,31 @@ export default function LeftMenu() {
             })}
           </List>
         </Box>        {/* Theme Switcher & Logout */}
-        <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
+        <Box sx={{ borderTop: 1, borderColor: 'divider' }}>          {/* Language Switcher */}
           <ListItem disablePadding>
-            <Tooltip title={`Switch to ${mode === 'light' ? 'dark' : 'light'} mode`} placement="right">
+            <ListItemButton sx={{ py: 1.5 }}>
+              <ListItemIcon sx={{ minWidth: 40 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Language color="primary" />
+                </Box>
+              </ListItemIcon>              <ListItemText 
+                primary={t('language_title')}
+                primaryTypographyProps={{ 
+                  variant: 'subtitle2',
+                  color: 'text.primary'
+                }}
+              />
+              <Box>
+                <LanguageSwitcher compact />
+              </Box>
+            </ListItemButton>
+          </ListItem>          <ListItem disablePadding>            <Tooltip title={t(mode === 'light' ? 'leftmenu_tooltip_theme_dark' : 'leftmenu_tooltip_theme_light')} placement="right">
               <ListItemButton onClick={toggleTheme} sx={{ py: 1.5 }}>
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   {mode === 'light' ? <Brightness4 /> : <Brightness7 />}
                 </ListItemIcon>
                 <ListItemText 
-                  primary={`${mode === 'light' ? 'Dark' : 'Light'} Mode`}
+                  primary={t(mode === 'light' ? 'theme_dark' : 'theme_light')}
                   primaryTypographyProps={{ 
                     variant: 'subtitle2',
                     color: 'text.primary'
@@ -293,15 +311,14 @@ export default function LeftMenu() {
               </ListItemButton>
             </Tooltip>
           </ListItem>
-          
-          <ListItem disablePadding>
-            <Tooltip title="Logout" placement="right">
+            <ListItem disablePadding>
+            <Tooltip title={t('leftmenu_tooltip_logout')} placement="right">
               <ListItemButton onClick={handleLogout} sx={{ py: 1.5 }}>
                 <ListItemIcon sx={{ minWidth: 40 }}>
                   <Logout color="error" />
                 </ListItemIcon>
                 <ListItemText 
-                  primary="Logout" 
+                  primary={t('leftmenu_action_logout')} 
                   primaryTypographyProps={{ 
                     variant: 'subtitle2',
                     color: 'error.main'
