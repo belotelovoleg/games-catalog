@@ -795,8 +795,7 @@ export default function PlatformGamesPage() {  const params = useParams()
               }}
               onClick={() => handleGameClick(game)}
             >
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <CardContent>                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                   <Typography variant="h6" sx={{ fontWeight: 600, flex: 1 }}>
                     {game.name}
                   </Typography>
@@ -804,6 +803,7 @@ export default function PlatformGamesPage() {  const params = useParams()
                     label={game.status}
                     color={getStatusColor(game.status) as any}
                     size="small"
+                    onClick={() => {}}
                   />
                 </Box>
                   <Stack spacing={1}>
@@ -824,11 +824,11 @@ export default function PlatformGamesPage() {  const params = useParams()
                     <Box>
                       <Typography variant="body2" color="text.secondary" component="span">
                         Condition: 
-                      </Typography>
-                      <Chip
+                      </Typography>                      <Chip
                         label={game.condition.replace('_', ' ')}
                         size="small"
                         variant="outlined"
+                        onClick={() => {}}
                         sx={{ ml: 1 }}
                       />
                     </Box>                  )}
@@ -1004,12 +1004,12 @@ export default function PlatformGamesPage() {  const params = useParams()
                           Also: {game.igdbDetails.alternativeNameDetails.slice(0, 2).map(altName => altName.name).join(', ')}
                           {game.igdbDetails.alternativeNameDetails.length > 2 && '...'}
                         </Typography>
-                      )}
-                      {game.condition && (
+                      )}                      {game.condition && (
                         <Chip
                           label={game.condition.replace('_', ' ')}
                           size="small"
                           variant="outlined"
+                          onClick={() => {}}
                         />
                       )}
                     </Box>
@@ -1019,6 +1019,7 @@ export default function PlatformGamesPage() {  const params = useParams()
                       label={game.status}
                       color={getStatusColor(game.status) as any}
                       size="small"
+                      onClick={() => {}}
                     />
                   </TableCell>
                   <TableCell>
@@ -1207,10 +1208,9 @@ export default function PlatformGamesPage() {  const params = useParams()
                           </Stack>
                         </Box>
                       )}
-                      
-                      {/* Custom Game indicator */}
+                        {/* Custom Game indicator */}
                       {!game.igdbGameId && (
-                        <Chip label="📝 Custom Game" size="small" variant="outlined" color="warning" />
+                        <Chip label="📝 Custom Game" size="small" variant="outlined" color="warning" onClick={() => {}} />
                       )}
                     </Stack>
                   </TableCell>
@@ -1221,6 +1221,7 @@ export default function PlatformGamesPage() {  const params = useParams()
                         size="small" 
                         color="primary"
                         variant="outlined"
+                        onClick={() => {}}
                       />
                     ) : (
                       <Typography variant="body2" color="text.secondary">-</Typography>

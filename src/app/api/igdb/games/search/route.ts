@@ -39,26 +39,36 @@ export async function GET(req: NextRequest) {
     })
 
     // Get the alternative name IDs that match
-    const matchingAltNameIds = matchingAltNames.map(alt => alt.igdbId)    // Find games that have these alternative name IDs in their alternative_names JSON field
+    const matchingAltNameIds = matchingAltNames.map(alt => alt.igdbId)
+
+    // Find games that have these alternative name IDs in their alternative_names JSON field
     let gamesByAltNames: any[] = []
     if (matchingAltNameIds.length > 0) {
-      // Use PostgreSQL's JSON operators to efficiently find games containing these IDs
-      // This is much more efficient than loading all games and filtering in JS
-      for (const altNameId of matchingAltNameIds) {
-        const gamesWithThisAltName = await prisma.igdbGames.findMany({
-          where: {
-            alternative_names: {
-              contains: `${altNameId}`
-            }
-          },
-          take: 20,
-          orderBy: [
-            { rating: 'desc' },
-            { name: 'asc' }
-          ]
-        })
-        gamesByAltNames.push(...gamesWithThisAltName)
-      }
+      // Search for games where the alternative_names JSON array contains any of the matching IDs
+      const gamesWithAltNames = await prisma.igdbGames.findMany({
+        where: {
+          alternative_names: {
+            not: null
+          }
+        },
+        take: 100 // Get more games to check their alternative names
+      })      // Filter games that contain the matching alternative name IDs
+      gamesByAltNames = gamesWithAltNames.filter(game => {
+        if (!game.alternative_names) return false
+        
+        try {
+          const altNameIds = JSON.parse(game.alternative_names)
+          if (!Array.isArray(altNameIds)) return false
+          
+          // Convert both arrays to numbers for comparison to handle type mismatches
+          const gameAltIds = altNameIds.map(id => typeof id === 'string' ? parseInt(id) : id)
+          const searchIds = matchingAltNameIds.map(id => typeof id === 'string' ? parseInt(id) : id)
+          
+          return gameAltIds.some(id => searchIds.includes(id))
+        } catch (e) {
+          return false
+        }
+      })
     }
 
     // Combine and deduplicate results

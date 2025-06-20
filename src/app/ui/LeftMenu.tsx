@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Cookies from 'js-cookie'
@@ -65,6 +65,7 @@ export default function LeftMenu() {
   const [isOpen, setIsOpen] = useState(true)
   const [expandedGroups, setExpandedGroups] = useState<string[]>(['catalog'])
   const [user, setUser] = useState<DecodedToken | null>(null)
+  const toggleButtonRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     const token = Cookies.get('token')
     if (token) {
@@ -107,9 +108,18 @@ export default function LeftMenu() {
 
     return () => clearInterval(checkTokenPeriodically)
   }, [user])
-
   const toggleMenu = () => {
     setIsOpen(!isOpen)
+  }
+
+  const handleDrawerClose = () => {
+    setIsOpen(false)
+    // Move focus back to the toggle button to prevent accessibility issues
+    setTimeout(() => {
+      if (toggleButtonRef.current) {
+        toggleButtonRef.current.focus()
+      }
+    }, 100)
   }
 
   const toggleGroup = (groupTitle: string) => {
@@ -172,6 +182,7 @@ export default function LeftMenu() {
   return (
     <>      {/* Toggle Button - Fixed position */}
       <IconButton
+        ref={toggleButtonRef}
         onClick={toggleMenu}
         sx={{
           position: 'fixed',
@@ -191,7 +202,7 @@ export default function LeftMenu() {
       </IconButton>      <Drawer
         variant="temporary"
         open={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={handleDrawerClose}
         ModalProps={{
           keepMounted: true, // Better open performance on mobile
         }}

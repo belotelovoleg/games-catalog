@@ -402,11 +402,11 @@ export default function GameDetailDialog({
                 </Typography>
                 
                 {game.rating && (
-                  <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Chip 
+                  <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>                    <Chip 
                       label={`${Math.round(game.rating)}/100`} 
                       color="primary" 
                       size="small"
+                      onClick={() => {}}
                       sx={{ fontWeight: 600 }}
                     />
                     <Typography variant="body2" color="text.secondary">
@@ -419,12 +419,12 @@ export default function GameDetailDialog({
                   <Box sx={{ mb: 1.5 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       <strong>Franchise</strong>
-                    </Typography>
-                    <Chip 
+                    </Typography>                    <Chip 
                       label={(game.igdbDetails as any).franchiseDetails.name} 
                       variant="outlined" 
                       size="small" 
                       color="secondary"
+                      onClick={() => {}}
                     />
                   </Box>
                 )}
@@ -433,12 +433,12 @@ export default function GameDetailDialog({
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                       <strong>Game Type</strong>
-                    </Typography>
-                    <Chip 
+                    </Typography>                    <Chip 
                       label={(game.igdbDetails as any).gameTypeDetails.type} 
                       variant="outlined" 
                       size="small" 
                       color="info"
+                      onClick={() => {}}
                     />
                   </Box>
                 )}
@@ -532,11 +532,11 @@ export default function GameDetailDialog({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
                     Status:
-                  </Typography>
-                  <Chip 
+                  </Typography>                  <Chip 
                     label={game.status} 
                     color={game.status === 'OWNED' ? 'success' : 'warning'} 
                     size="small" 
+                    onClick={() => {}}
                     sx={{ fontWeight: 600 }}
                   />
                 </Box>
@@ -545,11 +545,11 @@ export default function GameDetailDialog({
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                     <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
                       Condition:
-                    </Typography>
-                    <Chip 
+                    </Typography>                    <Chip 
                       label={formatCondition(game.condition)} 
                       variant="outlined" 
                       size="small"
+                      onClick={() => {}}
                       sx={{ 
                         borderColor: 'rgba(255,255,255,0.5)', 
                         color: 'white',
@@ -562,11 +562,11 @@ export default function GameDetailDialog({
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
                     Your Rating:
-                  </Typography>
-                  <Chip 
+                  </Typography>                  <Chip 
                     label={game.rating ? `${Math.round(game.rating)}/100` : 'Not rated'} 
                     variant="outlined" 
                     size="small"
+                    onClick={() => {}}
                     sx={{ 
                       borderColor: 'rgba(255,255,255,0.5)', 
                       color: 'white',
@@ -697,11 +697,11 @@ export default function GameDetailDialog({
                   <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="body2" color="text.secondary">
                       <strong>IGDB Rating:</strong>
-                    </Typography>
-                    <Chip 
+                    </Typography>                    <Chip 
                       label={`${Math.round(game.igdbDetails.rating)}/100`} 
                       color="primary" 
                       size="small"
+                      onClick={() => {}}
                       sx={{ fontWeight: 600 }}
                     />
                   </Box>
@@ -731,14 +731,14 @@ export default function GameDetailDialog({
                     <Typography variant="body2" gutterBottom>
                       <strong>Genres:</strong>
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {(game.igdbDetails as any).genreDetails.map((genre: any) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).genreDetails.map((genre: any) => (
                         <Chip 
                           key={genre.igdbId} 
                           label={genre.name} 
                           size="small" 
                           variant="outlined" 
                           color="primary"
+                          onClick={() => {}}
                         />
                       ))}
                     </Box>
@@ -751,14 +751,14 @@ export default function GameDetailDialog({
                     <Typography variant="body2" gutterBottom>
                       <strong>Companies:</strong>
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {(game.igdbDetails as any).companyDetails.map((company: any) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).companyDetails.map((company: any) => (
                         <Chip 
                           key={company.igdbId} 
                           label={company.name} 
                           size="small" 
                           variant="outlined" 
                           color="secondary"
+                          onClick={() => {}}
                         />
                       ))}
                     </Box>
@@ -887,6 +887,7 @@ export default function GameDetailDialog({
                           size="small" 
                           variant="outlined" 
                           color="warning"
+                          onClick={() => {}}
                         />
                       ))}
                     </Box>
@@ -906,6 +907,7 @@ export default function GameDetailDialog({
                           size="small" 
                           variant="outlined" 
                           color="info"
+                          onClick={() => {}}
                         />
                       ))}
                     </Box>
@@ -918,14 +920,14 @@ export default function GameDetailDialog({
                     <Typography variant="body2" gutterBottom>
                       <strong>Game Engines:</strong>
                     </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {(game.igdbDetails as any).gameEngineDetails.map((engine: any) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).gameEngineDetails.map((engine: any) => (
                         <Chip 
                           key={engine.igdbId} 
                           label={engine.name} 
                           size="small" 
                           variant="outlined"
                           color="success"
+                          onClick={() => {}}
                         />
                       ))}
                     </Box>

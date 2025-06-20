@@ -3,10 +3,11 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const gameId = parseInt(params.id)
+    const { id } = await params
+    const gameId = parseInt(id)
     
     if (isNaN(gameId)) {
       return NextResponse.json({ error: 'Invalid game ID' }, { status: 400 })
