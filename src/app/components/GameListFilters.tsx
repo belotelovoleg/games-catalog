@@ -12,6 +12,7 @@ import {
   useTheme
 } from '@mui/material'
 import { Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface GameListFiltersProps {
   searchQuery: string
@@ -61,6 +62,7 @@ export default function GameListFilters({
   showPlatformFilter = false
 }: GameListFiltersProps) {
   const theme = useTheme()
+  const { t } = useLanguage()
 
   const hasActiveFilters = Boolean(
     searchQuery ||
@@ -74,12 +76,11 @@ export default function GameListFilters({
 
   return (
     <Paper sx={{ p: 2, mb: 3, backgroundColor: theme.palette.mode === 'dark' ? 'grey.800' : 'background.paper' }}>
-      <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, flexWrap: 'wrap' }}>
-        {/* Search Field */}
+      <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' }, flexWrap: 'wrap' }}>        {/* Search Field */}
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search games by name or alternative name..."
+          placeholder={t('gamefilter_search_placeholder')}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           InputProps={{
@@ -109,42 +110,39 @@ export default function GameListFilters({
         />
 
         {/* Filter Controls */}
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flex: { xs: '1', md: '3' } }}>
-          {/* Status Filter */}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', flex: { xs: '1', md: '3' } }}>          {/* Status Filter */}
           <FormControl sx={{ minWidth: 100, flex: 1 }}>
-            <InputLabel size="small">Status</InputLabel>
+            <InputLabel size="small">{t('gamefilter_status_label')}</InputLabel>
             <Select
               size="small"
               value={selectedStatus}
-              label="Status"
+              label={t('gamefilter_status_label')}
               onChange={(e) => onStatusChange(e.target.value)}
               sx={{
                 backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
               }}
             >
               <MenuItem value="">
-                <em>All</em>
+                <em>{t('gamefilter_status_all')}</em>
               </MenuItem>
-              <MenuItem value="OWNED">Owned</MenuItem>
-              <MenuItem value="WISHLISTED">Wishlisted</MenuItem>
+              <MenuItem value="OWNED">{t('gamefilter_status_owned')}</MenuItem>
+              <MenuItem value="WISHLISTED">{t('gamefilter_status_wishlisted')}</MenuItem>
             </Select>
-          </FormControl>
-
-          {/* Platform Filter (only shown when showPlatformFilter is true) */}
+          </FormControl>          {/* Platform Filter (only shown when showPlatformFilter is true) */}
           {showPlatformFilter && availablePlatforms.length > 0 && (
             <FormControl sx={{ minWidth: 120, flex: 1 }}>
-              <InputLabel size="small">Platform</InputLabel>
+              <InputLabel size="small">{t('gamefilter_platform_label')}</InputLabel>
               <Select
                 size="small"
                 value={selectedPlatform}
-                label="Platform"
+                label={t('gamefilter_platform_label')}
                 onChange={(e) => onPlatformChange?.(e.target.value)}
                 sx={{
                   backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
                 }}
               >
                 <MenuItem value="">
-                  <em>All</em>
+                  <em>{t('gamefilter_platform_all')}</em>
                 </MenuItem>
                 {availablePlatforms.map((platform) => (
                   <MenuItem key={platform.id} value={platform.id.toString()}>
@@ -153,23 +151,21 @@ export default function GameListFilters({
                 ))}
               </Select>
             </FormControl>
-          )}
-
-          {/* Genre Filter */}
+          )}          {/* Genre Filter */}
           {availableGenres.length > 0 && (
             <FormControl sx={{ minWidth: 120, flex: 1 }}>
-              <InputLabel size="small">Genre</InputLabel>
+              <InputLabel size="small">{t('gamefilter_genre_label')}</InputLabel>
               <Select
                 size="small"
                 value={selectedGenre}
-                label="Genre"
+                label={t('gamefilter_genre_label')}
                 onChange={(e) => onGenreChange(e.target.value)}
                 sx={{
                   backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
                 }}
               >
                 <MenuItem value="">
-                  <em>All</em>
+                  <em>{t('gamefilter_genre_all')}</em>
                 </MenuItem>
                 {availableGenres.map((genre) => (
                   <MenuItem key={genre} value={genre}>
@@ -178,23 +174,21 @@ export default function GameListFilters({
                 ))}
               </Select>
             </FormControl>
-          )}
-
-          {/* Franchise Filter */}
+          )}          {/* Franchise Filter */}
           {availableFranchises.length > 0 && (
             <FormControl sx={{ minWidth: 120, flex: 1 }}>
-              <InputLabel size="small">Franchise</InputLabel>
+              <InputLabel size="small">{t('gamefilter_franchise_label')}</InputLabel>
               <Select
                 size="small"
                 value={selectedFranchise}
-                label="Franchise"
+                label={t('gamefilter_franchise_label')}
                 onChange={(e) => onFranchiseChange(e.target.value)}
                 sx={{
                   backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
                 }}
               >
                 <MenuItem value="">
-                  <em>All</em>
+                  <em>{t('gamefilter_franchise_all')}</em>
                 </MenuItem>
                 {availableFranchises.map((franchise) => (
                   <MenuItem key={franchise} value={franchise}>
@@ -203,23 +197,21 @@ export default function GameListFilters({
                 ))}
               </Select>
             </FormControl>
-          )}
-
-          {/* Company Filter */}
+          )}          {/* Company Filter */}
           {availableCompanies.length > 0 && (
             <FormControl sx={{ minWidth: 120, flex: 1 }}>
-              <InputLabel size="small">Company</InputLabel>
+              <InputLabel size="small">{t('gamefilter_company_label')}</InputLabel>
               <Select
                 size="small"
                 value={selectedCompany}
-                label="Company"
+                label={t('gamefilter_company_label')}
                 onChange={(e) => onCompanyChange(e.target.value)}
                 sx={{
                   backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
                 }}
               >
                 <MenuItem value="">
-                  <em>All</em>
+                  <em>{t('gamefilter_company_all')}</em>
                 </MenuItem>
                 {availableCompanies.map((company) => (
                   <MenuItem key={company} value={company}>
@@ -228,23 +220,21 @@ export default function GameListFilters({
                 ))}
               </Select>
             </FormControl>
-          )}
-
-          {/* Multiplayer Filter */}
+          )}          {/* Multiplayer Filter */}
           {availableMultiplayerModes.length > 0 && (
             <FormControl sx={{ minWidth: 120, flex: 1 }}>
-              <InputLabel size="small">Multiplayer</InputLabel>
+              <InputLabel size="small">{t('gamefilter_multiplayer_label')}</InputLabel>
               <Select
                 size="small"
                 value={selectedMultiplayer}
-                label="Multiplayer"
+                label={t('gamefilter_multiplayer_label')}
                 onChange={(e) => onMultiplayerChange(e.target.value)}
                 sx={{
                   backgroundColor: theme.palette.mode === 'dark' ? 'grey.900' : 'background.default',
                 }}
               >
                 <MenuItem value="">
-                  <em>All</em>
+                  <em>{t('gamefilter_multiplayer_all')}</em>
                 </MenuItem>
                 {availableMultiplayerModes.map((mode) => (
                   <MenuItem key={mode} value={mode}>
@@ -254,9 +244,7 @@ export default function GameListFilters({
               </Select>
             </FormControl>
           )}
-        </Box>
-
-        {/* Clear All Filters Button */}
+        </Box>        {/* Clear All Filters Button */}
         {hasActiveFilters && (
           <Button
             variant="outlined"
@@ -264,7 +252,7 @@ export default function GameListFilters({
             onClick={onClearAll}
             sx={{ whiteSpace: 'nowrap' }}
           >
-            Clear All
+            {t('gamefilter_clear_all')}
           </Button>
         )}
       </Box>

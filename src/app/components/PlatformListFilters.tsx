@@ -12,6 +12,7 @@ import {
   Paper,
   Typography
 } from '@mui/material'
+import { useLanguage } from '../../contexts/LanguageContext'
 
 interface FilterOptions {
   generations: { value: number; label: string }[]
@@ -46,16 +47,17 @@ export default function PlatformListFilters({
   onTypeChange,
   onClearFilters
 }: PlatformListFiltersProps) {
-  return (
-    <Paper sx={{ p: 3, mb: 3 }}>
+  const { t } = useLanguage()
+
+  return (    <Paper sx={{ p: 3, mb: 3 }}>
       <Typography variant="h6" sx={{ mb: 2 }}>
-        Filter Platforms
+        {t('platformfilter_title')}
       </Typography>
       <Grid container spacing={2} alignItems="center">
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <TextField
             fullWidth
-            label="Search platforms..."
+            label={t('platformfilter_search_placeholder')}
             variant="outlined"
             size="small"
             value={searchTerm}
@@ -65,13 +67,13 @@ export default function PlatformListFilters({
         
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <FormControl fullWidth size="small">
-            <InputLabel>Generation</InputLabel>
+            <InputLabel>{t('platformfilter_generation_label')}</InputLabel>
             <Select
               value={selectedGeneration}
-              label="Generation"
+              label={t('platformfilter_generation_label')}
               onChange={(e) => onGenerationChange(e.target.value)}
             >
-              <MenuItem value="">All</MenuItem>
+              <MenuItem value="">{t('platformfilter_generation_all')}</MenuItem>
               {filterOptions?.generations.map((gen) => (
                 <MenuItem key={gen.value} value={gen.value.toString()}>
                   {gen.label}
@@ -80,16 +82,15 @@ export default function PlatformListFilters({
             </Select>
           </FormControl>
         </Grid>
-        
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <FormControl fullWidth size="small">
-            <InputLabel>Family</InputLabel>
+            <InputLabel>{t('platformfilter_family_label')}</InputLabel>
             <Select
               value={selectedFamily}
-              label="Family"
+              label={t('platformfilter_family_label')}
               onChange={(e) => onFamilyChange(e.target.value)}
             >
-              <MenuItem value="">All</MenuItem>
+              <MenuItem value="">{t('platformfilter_family_all')}</MenuItem>
               {filterOptions?.families.map((family) => (
                 <MenuItem key={family.value} value={family.value.toString()}>
                   {family.label}
@@ -101,13 +102,13 @@ export default function PlatformListFilters({
         
         <Grid size={{ xs: 12, sm: 6, md: 2 }}>
           <FormControl fullWidth size="small">
-            <InputLabel>Type</InputLabel>
+            <InputLabel>{t('platformfilter_type_label')}</InputLabel>
             <Select
               value={selectedType}
-              label="Type"
+              label={t('platformfilter_type_label')}
               onChange={(e) => onTypeChange(e.target.value)}
             >
-              <MenuItem value="">All</MenuItem>
+              <MenuItem value="">{t('platformfilter_type_all')}</MenuItem>
               {filterOptions?.types.map((type) => (
                 <MenuItem key={type.value} value={type.value.toString()}>
                   {type.label}
@@ -116,17 +117,15 @@ export default function PlatformListFilters({
             </Select>
           </FormControl>
         </Grid>
-        
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <Button 
             variant="outlined" 
             onClick={onClearFilters}
             sx={{ mr: 1 }}
           >
-            Clear Filters
-          </Button>
-          <Chip 
-            label={`${resultCount} platforms`} 
+            {t('platformfilter_clear_filters')}
+          </Button>          <Chip 
+            label={`${resultCount} ${t('platformfilter_platforms_count')}`}
             color="primary" 
             variant="outlined" 
           />

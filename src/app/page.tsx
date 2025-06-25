@@ -20,6 +20,7 @@ import GameListFilters from './components/GameListFilters'
 import PlatformListFilters from './components/PlatformListFilters'
 import PlatformCardGrid from './components/PlatformCardGrid'
 import GameDetailDialog from './ui/GameDetailDialog'
+import { useLanguage } from '../contexts/LanguageContext'
 import { useGameFilters } from './hooks/useGameFilters'
 import { usePlatformFilters } from './hooks/usePlatformFilters'
 
@@ -90,6 +91,7 @@ export default function HomePage() {
   const [platformLoading, setPlatformLoading] = useState<Record<number, 'adding' | 'removing' | null>>({})
   
   const router = useRouter()
+  const { t } = useLanguage()
 
   // Game filters hook
   const gameFilters = useGameFilters(allUserGames)
@@ -141,7 +143,6 @@ export default function HomePage() {
       fetchPlatformData()
     }
   }, [user, tabValue, platformFilters.searchTerm, platformFilters.selectedFamily, platformFilters.selectedType, platformFilters.selectedGeneration])
-
   const fetchUserGames = async () => {
     setGamesLoading(true)
     try {
@@ -162,15 +163,14 @@ export default function HomePage() {
         
         setAllUserGames(gamesWithPlatforms)
       } else {
-        setError('Failed to fetch games')
+        setError(t('homepage_error_fetch_games'))
       }
     } catch (error) {
-      setError('Failed to fetch games')
+      setError(t('homepage_error_fetch_games'))
     } finally {
       setGamesLoading(false)
     }
   }
-
   const fetchPlatformData = async () => {
     try {
       const params = platformFilters.buildQueryParams()
@@ -189,7 +189,7 @@ export default function HomePage() {
         setUserPlatforms(userPlatforms)
       }
     } catch (error) {
-      setError('Failed to fetch platform data')
+      setError(t('homepage_error_fetch_platforms'))
     }
   }
   const handleGameClick = async (game: GameWithIgdbDetails) => {
@@ -217,7 +217,6 @@ export default function HomePage() {
       }
     }
   }
-
   const handleDeleteGame = async (gameId: number) => {
     try {
       const response = await fetch(`/api/user/games/${gameId}`, {
@@ -227,10 +226,10 @@ export default function HomePage() {
       if (response.ok) {
         fetchUserGames() // Refresh games
       } else {
-        setError('Failed to delete game')
+        setError(t('homepage_error_delete_game'))
       }
     } catch (error) {
-      setError('Failed to delete game')
+      setError(t('homepage_error_delete_game'))
     }
   }
 
@@ -243,7 +242,6 @@ export default function HomePage() {
     // You can implement platform details modal here
     console.log('Platform details:', platformId)
   }
-
   const handleAddPlatform = async (platformId: number, status: 'OWNED' | 'WISHLISTED') => {
     setPlatformLoading(prev => ({ ...prev, [platformId]: 'adding' }))
     try {
@@ -257,15 +255,14 @@ export default function HomePage() {
       if (response.ok) {
         fetchPlatformData() // Refresh data
       } else {
-        setError('Failed to add platform')
+        setError(t('homepage_error_add_platform'))
       }
     } catch (error) {
-      setError('Failed to add platform')
+      setError(t('homepage_error_add_platform'))
     } finally {
       setPlatformLoading(prev => ({ ...prev, [platformId]: null }))
     }
   }
-
   const handleRemovePlatform = async (platformId: number) => {
     setPlatformLoading(prev => ({ ...prev, [platformId]: 'removing' }))
     try {
@@ -279,10 +276,10 @@ export default function HomePage() {
       if (response.ok) {
         fetchPlatformData() // Refresh data
       } else {
-        setError('Failed to remove platform')
+        setError(t('homepage_error_remove_platform'))
       }
     } catch (error) {
-      setError('Failed to remove platform')
+      setError(t('homepage_error_remove_platform'))
     } finally {
       setPlatformLoading(prev => ({ ...prev, [platformId]: null }))
     }
@@ -303,24 +300,23 @@ export default function HomePage() {
   if (!user) {
     return null // Will redirect to login
   }
-
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Typography variant="h4" gutterBottom sx={{ mb: 3, textAlign: 'center' }}>
-        Game Catalog
+        {t('homepage_title')}
       </Typography>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="collection tabs">
           <Tab 
             icon={<VideogameAsset />} 
-            label="My Games" 
+            label={t('homepage_tab_games')}
             iconPosition="start"
             sx={{ minHeight: 64 }}
           />
           <Tab 
             icon={<GamepadOutlined />} 
-            label="Browse Platforms" 
+            label={t('homepage_tab_platforms')} 
             iconPosition="start"
             sx={{ minHeight: 64 }}
           />
@@ -358,11 +354,9 @@ export default function HomePage() {
                 availablePlatforms={gameFilters.availablePlatforms}
                 onClearAll={gameFilters.clearAllFilters}
                 showPlatformFilter={true}
-              />
-
-              {gameFilters.filteredGames.length === 0 ? (
+              />              {gameFilters.filteredGames.length === 0 ? (
                 <Typography variant="h6" textAlign="center" sx={{ mt: 4, opacity: 0.7 }}>
-                  {allUserGames.length === 0 ? 'No games in your collection yet' : 'No games match your filters'}
+                  {allUserGames.length === 0 ? t('homepage_no_games') : t('homepage_no_filtered_games')}
                 </Typography>
               ) : (
                 <>
@@ -403,11 +397,9 @@ export default function HomePage() {
             onFamilyChange={platformFilters.setSelectedFamily}
             onTypeChange={platformFilters.setSelectedType}
             onClearFilters={platformFilters.clearFilters}
-          />
-
-          {platforms.length === 0 ? (
+          />          {platforms.length === 0 ? (
             <Typography variant="h6" textAlign="center" sx={{ mt: 4, opacity: 0.7 }}>
-              No platforms found with current filters
+              {t('homepage_no_platforms')}
             </Typography>
           ) : (
             <PlatformCardGrid

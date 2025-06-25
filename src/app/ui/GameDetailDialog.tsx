@@ -430,10 +430,9 @@ export default function GameDetailDialog({
                 }}>
                   Quick Info
                 </Typography>
-                
-                {game.rating && (
+                  {game.igdbDetails?.rating && (
                   <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>                    <Chip 
-                      label={`${Math.round(game.rating)}/100`} 
+                      label={`${Math.round(game.igdbDetails.rating)}/100`} 
                       color="primary" 
                       size="small"
                       onClick={() => {}}
