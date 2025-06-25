@@ -58,8 +58,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessToken = await getIGDBAccessToken()    // Get all games we have in our DB to limit the sync scope
+    // Parse request body to get optional platformId
+    let platformId: number | undefined
+    try {
+      const body = await request.json()
+      platformId = body.platformId
+    } catch (error) {
+      // If no JSON body, that's fine - sync all alternative names
+    }
+
+    const accessToken = await getIGDBAccessToken()
+    
+    // Build query conditions based on platform selection
+    let gameQuery: any = {}
+
+    // If platformId is provided, filter games by platform
+    if (platformId) {
+      const platform = await prisma.platform.findUnique({ 
+        where: { id: platformId },
+        select: { igdbPlatformId: true, igdbPlatformVersionId: true, name: true }
+      })
+      
+      if (!platform) {
+        return NextResponse.json(
+          { error: 'Platform not found' },
+          { status: 404 }
+        )
+      }
+
+      // Filter games by platform
+      gameQuery = {
+        OR: [
+          platform.igdbPlatformId ? { platformId: platform.igdbPlatformId } : {},
+          platform.igdbPlatformVersionId ? { platformVersionId: platform.igdbPlatformVersionId } : {}
+        ].filter(condition => Object.keys(condition).length > 0)
+      }
+
+      console.log(`Syncing alternative names for platform: ${platform.name} (IGDB Platform ID: ${platform.igdbPlatformId}, Version ID: ${platform.igdbPlatformVersionId})`)
+    }
+
+    // Get all games we have in our DB to limit the sync scope
     const ourGames = await prisma.igdbGames.findMany({
+      where: gameQuery,
       select: { igdbId: true },
       distinct: ['igdbId']
     })
@@ -123,43 +163,53 @@ export async function POST(request: NextRequest) {
       const alternativeNames = await response.json()
       console.log(`Fetched ${alternativeNames.length} alternative names, now saving batch to database...`)
 
-      // Process this batch immediately
+      // --- Batching for DB save ---
       let newCount = 0
       let updatedCount = 0
-
-      for (const altName of alternativeNames) {
-        try {          const existingAltName = await prisma.igdbAlternativeNames.findUnique({
-            where: { igdbId: altName.id }
+      const BATCH_DB_SIZE = 100
+      // Find all existing IDs in this batch
+      const altNameIds = alternativeNames.map((altName: any) => altName.id)
+      const existingAltNames = await prisma.igdbAlternativeNames.findMany({
+        where: { igdbId: { in: altNameIds } },
+        select: { igdbId: true }
+      })
+      const existingIds = new Set(existingAltNames.map(a => a.igdbId))
+      // Split into new and existing
+      const toCreate = alternativeNames.filter((altName: any) => !existingIds.has(altName.id))
+      const toUpdate = alternativeNames.filter((altName: any) => existingIds.has(altName.id))
+      // Batch create new
+      for (let j = 0; j < toCreate.length; j += BATCH_DB_SIZE) {
+        const createBatch = toCreate.slice(j, j + BATCH_DB_SIZE)
+        if (createBatch.length > 0) {
+          await prisma.igdbAlternativeNames.createMany({
+            data: createBatch.map((altName: any) => ({
+              igdbId: altName.id,
+              name: altName.name || ''
+            })),
+            skipDuplicates: true
           })
-
-          if (existingAltName) {
-            await prisma.igdbAlternativeNames.update({
-              where: { igdbId: altName.id },
-              data: {
-                name: altName.name || ''
-              }
-            })
-            updatedCount++
-          } else {
-            await prisma.igdbAlternativeNames.create({
-              data: {
-                igdbId: altName.id,
-                name: altName.name || ''
-              }
-            })
-            newCount++
-          }
-        } catch (error) {
-          console.error(`Error saving alternative name ${altName.id}:`, error)
+          newCount += createBatch.length
         }
       }
-
+      // Batch update existing (one by one, or optimize if needed)
+      for (let j = 0; j < toUpdate.length; j += BATCH_DB_SIZE) {
+        const updateBatch = toUpdate.slice(j, j + BATCH_DB_SIZE)
+        await Promise.all(updateBatch.map(async (altName: any) => {
+          try {
+            await prisma.igdbAlternativeNames.update({
+              where: { igdbId: altName.id },
+              data: { name: altName.name || '' }
+            })
+            updatedCount++
+          } catch (error) {
+            console.error(`Error updating alternative name ${altName.id}:`, error)
+          }
+        }))
+      }
       totalNewCount += newCount
       totalUpdatedCount += updatedCount
       totalProcessed += alternativeNames.length
-
       console.log(`Batch saved: ${newCount} new, ${updatedCount} updated (Total processed: ${totalProcessed})`)
-
       // Add a small delay to respect IGDB rate limits (4 requests per second)
       if (i + batchSize < gameIds.length) {
         await new Promise(resolve => setTimeout(resolve, 250))

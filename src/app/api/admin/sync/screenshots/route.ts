@@ -58,11 +58,51 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessToken = await getIGDBAccessToken()    // Get all games we have that don't have screenshots synced yet
+    // Parse request body to get optional platformId
+    let platformId: number | undefined
+    try {
+      const body = await request.json()
+      platformId = body.platformId
+    } catch (error) {
+      // If no JSON body, that's fine - sync all screenshots
+    }
+
+    const accessToken = await getIGDBAccessToken()
+    
+    // Build query conditions based on platform selection
+    let gameQuery: any = {
+      screenshots: { not: null }, // Games that have screenshot IDs in IGDB
+    }
+
+    // If platformId is provided, filter games by platform
+    if (platformId) {
+      const platform = await prisma.platform.findUnique({ 
+        where: { id: platformId },
+        select: { igdbPlatformId: true, igdbPlatformVersionId: true, name: true }
+      })
+      
+      if (!platform) {
+        return NextResponse.json(
+          { error: 'Platform not found' },
+          { status: 404 }
+        )
+      }
+
+      // Filter games by platform
+      gameQuery = {
+        ...gameQuery,
+        OR: [
+          platform.igdbPlatformId ? { platformId: platform.igdbPlatformId } : {},
+          platform.igdbPlatformVersionId ? { platformVersionId: platform.igdbPlatformVersionId } : {}
+        ].filter(condition => Object.keys(condition).length > 0)
+      }
+
+      console.log(`Syncing screenshots for platform: ${platform.name} (IGDB Platform ID: ${platform.igdbPlatformId}, Version ID: ${platform.igdbPlatformVersionId})`)
+    }
+
+    // Get all games we have that don't have screenshots synced yet
     const gamesNeedingScreenshots = await prisma.igdbGames.findMany({
-      where: {
-        screenshots: { not: null }, // Games that have screenshot IDs in IGDB
-      },
+      where: gameQuery,
       select: { screenshots: true }
     })
 
@@ -144,43 +184,54 @@ export async function POST(request: NextRequest) {
       }
 
       const screenshots = await response.json()
-      console.log(`Fetched ${screenshots.length} screenshots, now saving batch to database...`)
-
-      // Process this batch immediately
+      console.log(`Fetched ${screenshots.length} screenshots, now saving batch to database...`)      // Process this batch with database batching for better performance
       let newCount = 0
       let updatedCount = 0
 
-      for (const screenshot of screenshots) {
-        try {
-          const existingScreenshot = await prisma.igdbScreenshots.findUnique({
-            where: { igdbId: screenshot.id }
-          })
+      console.log(`Processing ${screenshots.length} screenshots in database batches...`)
+      
+      // Process screenshots in DB batches of 100
+      const dbBatchSize = 100
+      for (let i = 0; i < screenshots.length; i += dbBatchSize) {
+        const batch = screenshots.slice(i, i + dbBatchSize)
+        console.log(`Processing DB batch ${Math.floor(i / dbBatchSize) + 1}/${Math.ceil(screenshots.length / dbBatchSize)}: ${batch.length} screenshots`)
+        
+        for (const screenshot of batch) {
+          try {
+            const existingScreenshot = await prisma.igdbScreenshots.findUnique({
+              where: { igdbId: screenshot.id }
+            })
 
-          if (existingScreenshot) {
-            await prisma.igdbScreenshots.update({
-              where: { igdbId: screenshot.id },
-              data: {
-                height: screenshot.height || null,
-                image_id: screenshot.image_id || null,
-                url: screenshot.url || null,
-                width: screenshot.width || null
-              }
-            })
-            updatedCount++
-          } else {
-            await prisma.igdbScreenshots.create({
-              data: {
-                igdbId: screenshot.id,
-                height: screenshot.height || null,
-                image_id: screenshot.image_id || null,
-                url: screenshot.url || null,
-                width: screenshot.width || null
-              }
-            })
-            newCount++
-          }
-        } catch (error) {
-          console.error(`Error saving screenshot ${screenshot.id}:`, error)
+            if (existingScreenshot) {
+              await prisma.igdbScreenshots.update({
+                where: { igdbId: screenshot.id },
+                data: {
+                  height: screenshot.height || null,
+                  image_id: screenshot.image_id || null,
+                  url: screenshot.url || null,
+                  width: screenshot.width || null
+                }
+              })
+              updatedCount++
+            } else {
+              await prisma.igdbScreenshots.create({
+                data: {
+                  igdbId: screenshot.id,
+                  height: screenshot.height || null,
+                  image_id: screenshot.image_id || null,
+                  url: screenshot.url || null,
+                  width: screenshot.width || null
+                }
+              })
+              newCount++
+            }
+          } catch (error) {
+            console.error(`Error saving screenshot ${screenshot.id}:`, error)
+          }        }
+        
+        // Small delay between DB batches
+        if (i + dbBatchSize < screenshots.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
 

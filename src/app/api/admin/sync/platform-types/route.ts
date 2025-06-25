@@ -42,40 +42,49 @@ export async function POST(request: NextRequest) {
     // Sync platform types to database
     let syncedCount = 0;
     let updatedCount = 0;
-
-    for (const type of platformTypes) {
-      try {
-        const existingType = await prisma.igdbPlatformType.findUnique({
-          where: { igdbId: type.id }
+    const BATCH_DB_SIZE = 100;
+    // Find all existing IDs
+    const allIds = platformTypes.map((t: any) => t.id);
+    const existing = await prisma.igdbPlatformType.findMany({
+      where: { igdbId: { in: allIds } },
+      select: { igdbId: true, name: true }
+    });
+    const existingMap = new Map(existing.map(t => [t.igdbId, t]));
+    const toCreate = platformTypes.filter((t: any) => !existingMap.has(t.id));
+    const toUpdate = platformTypes.filter((t: any) => {
+      const ex = existingMap.get(t.id);
+      return ex && ex.name !== t.name;
+    });
+    // Batch create
+    for (let i = 0; i < toCreate.length; i += BATCH_DB_SIZE) {
+      const batch = toCreate.slice(i, i + BATCH_DB_SIZE);
+      if (batch.length > 0) {
+        await prisma.igdbPlatformType.createMany({
+          data: batch.map((t: any) => ({
+            igdbId: t.id,
+            name: t.name
+          })),
+          skipDuplicates: true
         });
-
-        if (existingType) {
-          // Update existing type if name changed
-          if (existingType.name !== type.name) {
-            await prisma.igdbPlatformType.update({
-              where: { igdbId: type.id },
-              data: {
-                name: type.name
-              }
-            });
-            updatedCount++;
-            console.log(`Updated platform type: ${type.name} (ID: ${type.id})`);
-          }
-        } else {
-          // Create new platform type
-          await prisma.igdbPlatformType.create({
-            data: {
-              igdbId: type.id,
-              name: type.name
-            }
-          });
-          syncedCount++;
-          console.log(`Added platform type: ${type.name} (ID: ${type.id})`);
-        }
-      } catch (error) {
-        console.error(`Error syncing platform type ${type.id}:`, error);
+        syncedCount += batch.length;
       }
-    }    console.log(`Platform types sync completed: ${syncedCount} added, ${updatedCount} updated`);
+    }
+    // Batch update
+    for (let i = 0; i < toUpdate.length; i += BATCH_DB_SIZE) {
+      const batch = toUpdate.slice(i, i + BATCH_DB_SIZE);
+      await Promise.all(batch.map(async (t: any) => {
+        try {
+          await prisma.igdbPlatformType.update({
+            where: { igdbId: t.id },
+            data: { name: t.name }
+          });
+          updatedCount++;
+        } catch (error) {
+          console.error(`Error updating platform type ${t.id}:`, error);
+        }
+      }));
+    }
+    console.log(`Platform types sync completed: ${syncedCount} added, ${updatedCount} updated`);
 
     return NextResponse.json({
       success: true,

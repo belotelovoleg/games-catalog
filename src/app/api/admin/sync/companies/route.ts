@@ -68,22 +68,34 @@ export async function POST(request: NextRequest) {
         break;
       }      console.log(`Processing ${companies.length} companies...`);
 
-      // Process companies in batches to avoid overwhelming the database
-      for (const company of companies) {
-        try {
-          await prisma.igdbCompany.upsert({
-            where: { igdbId: company.id },
-            update: {
-              name: company.name,
-            },
-            create: {
-              igdbId: company.id,
-              name: company.name,
-            },
-          });
-          totalSynced++;
-        } catch (error) {
-          console.error(`Error processing company ${company.id} (${company.name}):`, error);
+      // Process companies in DB batches of 100 to avoid overwhelming the database
+      const dbBatchSize = 100;
+      for (let i = 0; i < companies.length; i += dbBatchSize) {
+        const batch = companies.slice(i, i + dbBatchSize);
+        console.log(`Processing DB batch ${Math.floor(i / dbBatchSize) + 1}/${Math.ceil(companies.length / dbBatchSize)}: ${batch.length} companies`);
+        
+        // Process each company in the batch
+        for (const company of batch) {
+          try {
+            await prisma.igdbCompany.upsert({
+              where: { igdbId: company.id },
+              update: {
+                name: company.name,
+              },
+              create: {
+                igdbId: company.id,
+                name: company.name,
+              },
+            });
+            totalSynced++;
+          } catch (error) {
+            console.error(`Error processing company ${company.id} (${company.name}):`, error);
+          }
+        }
+        
+        // Small delay between DB batches
+        if (i + dbBatchSize < companies.length) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 

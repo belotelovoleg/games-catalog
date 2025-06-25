@@ -8,7 +8,7 @@ const resources = {
       // Login page
       login_title: 'Login to Game Catalog',
       login_subtitle: 'Organize and track your video game collection',
-      login_description: 'Welcome to your personal gaming library! Catalog your cartridges, track your collection status, and discover games across multiple platforms. Build the ultimate database of your gaming adventures.',
+      login_description: 'Welcome to your personal gaming library! Catalog your cartridges, track your collection status, and discover games across multiple platforms. Build the ultimate database of your gamin      igdbsync_important_notes_description: "• Почніть з Синхронізації Платформ перед іншими операціями\n• Синхронізація специфічна для платформи потребує вибору платформи\n• Великі синхронізації (обкладинки, скріншоти) можуть зайняти багато часу\n• Всі операції дотримуються обмежень швидкості IGDB (4 запити/секунду)", adventures.',
       login_email_label: 'Email',
       login_email_placeholder: 'Enter your email address',
       login_password_label: 'Password',
@@ -164,11 +164,93 @@ const resources = {
       gamedetail_view_full_gallery: "View Full Gallery",
       gamedetail_images_count: "images",
       gamedetail_game_type_detail_label: "Game Type:",
-      gamedetail_age_ratings_label: "Age Ratings:",
-      gamedetail_alternative_names_label: "Alternative Names:",
+      gamedetail_age_ratings_label: "Age Ratings:",      gamedetail_alternative_names_label: "Alternative Names:",
       gamedetail_game_engines_label: "Game Engines:",
       gamedetail_custom_game_info: "This is a custom game not from IGDB. Only your personal information is available.",
       gamedetail_notes_display_label: "Notes:",
+
+      // IGDB Sync page
+      igdbsync_main_title: "IGDB Data Synchronization",
+      igdbsync_main_description: "Manage synchronization with the Internet Game Database (IGDB) to keep your local catalog up to date.",      igdbsync_workflow_title: "🚀 Synchronization Workflow",
+      igdbsync_workflow_description: "1. Start with Platforms Sync (fetch all platforms)\n2. Sync Supportive Data (reference data)\n3. Select a platform and sync games and related content\n\nNote: IGDB tokens are cached and reused until expiry (typically 60+ days).",
+      
+      // Block titles and descriptions
+      igdbsync_block1_title: "Platforms Sync",
+      igdbsync_block1_description: "Essential platform data - fetch all platforms without filters. Paginated by 500, written to DB in batches of 100.",
+      igdbsync_block2_title: "Supportive Data Sync", 
+      igdbsync_block2_description: "Reference and support data - fetch all without filters. Proper pagination and DB batching applied.",
+      igdbsync_block3_title: "Platform-Specific Sync",
+      igdbsync_block3_description: "Games and related data for a specific platform using WHERE filters. Select a platform first.",
+      
+      // Sync item labels
+      igdbsync_platforms_label: "Platforms",
+      igdbsync_platforms_desc: "Core gaming platforms (PlayStation, Xbox, etc.)",
+      igdbsync_platform_versions_label: "Platform Versions",
+      igdbsync_platform_versions_desc: "Specific platform variants (PS4 Pro, Xbox One S, etc.)",
+      igdbsync_companies_label: "Companies",
+      igdbsync_companies_desc: "Game developers and publishers",
+      igdbsync_platform_families_label: "Platform Families",
+      igdbsync_platform_families_desc: "Platform family groups (PlayStation family, etc.)",
+      igdbsync_platform_types_label: "Platform Types",
+      igdbsync_platform_types_desc: "Platform categories (Console, PC, Mobile, etc.)",
+      igdbsync_platform_logos_label: "Platform Logos",
+      igdbsync_platform_logos_desc: "Official platform logos and branding",
+      igdbsync_genres_label: "Genres",
+      igdbsync_genres_desc: "Game genres (Action, RPG, Strategy, etc.)",
+      igdbsync_franchises_label: "Franchises",
+      igdbsync_franchises_desc: "Game series and franchises (Mario, Call of Duty, etc.)",
+      igdbsync_game_engines_label: "Game Engines",
+      igdbsync_game_engines_desc: "Game development engines (Unity, Unreal, etc.)",
+      igdbsync_game_types_label: "Game Types",
+      igdbsync_game_types_desc: "Game categories (Main Game, DLC, Expansion, etc.)",
+      igdbsync_age_rating_categories_label: "Age Rating Categories",
+      igdbsync_age_rating_categories_desc: "Age rating classification categories",
+      igdbsync_games_label: "Games",
+      igdbsync_games_desc: "Games for the selected platform",
+      igdbsync_covers_label: "Game Covers",
+      igdbsync_covers_desc: "Game cover artwork and thumbnails",
+      igdbsync_screenshots_label: "Screenshots",
+      igdbsync_screenshots_desc: "Game screenshots and media",
+      igdbsync_alternative_names_label: "Alternative Names",
+      igdbsync_alternative_names_desc: "Regional and alternative game titles",
+      igdbsync_multiplayer_modes_label: "Multiplayer Modes",
+      igdbsync_multiplayer_modes_desc: "Online/offline multiplayer information",
+      igdbsync_age_ratings_label: "Age Ratings",
+      igdbsync_age_ratings_desc: "ESRB, PEGI, and other age rating data",
+      
+      // Time estimates
+      igdbsync_time_quick: "10-20s",
+      igdbsync_time_short: "30-60s",
+      igdbsync_time_short_medium: "1-3min",
+      igdbsync_time_medium: "2-5min",
+      igdbsync_time_medium_long: "2-10min",
+      igdbsync_time_long: "5-15min",
+      igdbsync_time_very_long: "10-30min",
+      
+      // Action buttons and states
+      igdbsync_required: "Required",
+      igdbsync_sync: "Sync",
+      igdbsync_resync: "Re-sync",
+      igdbsync_syncing: "Syncing...",
+      igdbsync_syncing_all: "Syncing All...",
+      igdbsync_sync_all_block: "Sync All {{title}}",
+      
+      // Platform selection
+      igdbsync_select_platform: "Select Platform",
+      igdbsync_select_platform_warning: "Please select a platform to enable platform-specific syncs.",
+      
+      // Success and error messages
+      igdbsync_success_title: "✅ {{label}} Sync Completed!",
+      igdbsync_success_message: "Successfully processed {{count}} items ({{new}} new, {{updated}} updated)",
+      igdbsync_error_title: "❌ {{label}} Sync Failed",
+      igdbsync_error_unknown: "Unknown error occurred",
+      igdbsync_error_network_message: "Network error or server unavailable",
+      igdbsync_error_load_platforms_title: "❌ Failed to Load Platforms",
+      igdbsync_error_load_platforms_message: "Could not load eligible platforms for sync",
+      
+      // Important notes
+      igdbsync_important_notes_title: "⚠️ Important Notes",
+      igdbsync_important_notes_description: "• Start with Platforms Sync before other operations\n• Platform-Specific syncs require a platform selection\n• Large syncs (covers, screenshots) can take significant time\n• All operations respect IGDB rate limits (4 requests/second)",
     }
   },
   uk: {
@@ -331,11 +413,93 @@ const resources = {
       gamedetail_view_full_gallery: "Переглянути Повну Галерею",
       gamedetail_images_count: "зображень",
       gamedetail_game_type_detail_label: "Тип Гри:",
-      gamedetail_age_ratings_label: "Вікові Рейтинги:",
-      gamedetail_alternative_names_label: "Альтернативні Назви:",
+      gamedetail_age_ratings_label: "Вікові Рейтинги:",      gamedetail_alternative_names_label: "Альтернативні Назви:",
       gamedetail_game_engines_label: "Ігрові Движки:",
       gamedetail_custom_game_info: "Це користувацька гра не з IGDB. Доступна лише ваша особиста інформація.",
       gamedetail_notes_display_label: "Нотатки:",
+
+      // IGDB Sync page
+      igdbsync_main_title: "Синхронізація Даних IGDB",
+      igdbsync_main_description: "Керуйте синхронізацією з Internet Game Database (IGDB) для оновлення вашого локального каталогу.",      igdbsync_workflow_title: "🚀 Робочий Процес Синхронізації",
+      igdbsync_workflow_description: "1. Почніть з Синхронізації Платформ (завантажте всі платформи)\n2. Синхронізуйте Допоміжні Дані (довідкові дані)\n3. Виберіть платформу та синхронізуйте ігри і пов'язаний контент\n\nПримітка: Токени IGDB кешуються та використовуються до закінчення терміну дії (зазвичай 60+ днів).",
+      
+      // Block titles and descriptions
+      igdbsync_block1_title: "Синхронізація Платформ",
+      igdbsync_block1_description: "Основні дані платформ - завантажте всі платформи без фільтрів. Постранична пагінація по 500, запис до БД порціями по 100.",
+      igdbsync_block2_title: "Синхронізація Допоміжних Даних", 
+      igdbsync_block2_description: "Довідкові та допоміжні дані - завантажте всі без фільтрів. Застосована правильна пагінація та пакетний запис до БД.",
+      igdbsync_block3_title: "Синхронізація Специфічна для Платформи",
+      igdbsync_block3_description: "Ігри та пов'язані дані для конкретної платформи з використанням WHERE фільтрів. Спочатку виберіть платформу.",
+      
+      // Sync item labels
+      igdbsync_platforms_label: "Платформи",
+      igdbsync_platforms_desc: "Основні ігрові платформи (PlayStation, Xbox тощо)",
+      igdbsync_platform_versions_label: "Версії Платформ",
+      igdbsync_platform_versions_desc: "Конкретні варіанти платформ (PS4 Pro, Xbox One S тощо)",
+      igdbsync_companies_label: "Компанії",
+      igdbsync_companies_desc: "Розробники та видавці ігор",
+      igdbsync_platform_families_label: "Родини Платформ",
+      igdbsync_platform_families_desc: "Групи родин платформ (родина PlayStation тощо)",
+      igdbsync_platform_types_label: "Типи Платформ",
+      igdbsync_platform_types_desc: "Категорії платформ (Консоль, ПК, Мобільні тощо)",
+      igdbsync_platform_logos_label: "Логотипи Платформ",
+      igdbsync_platform_logos_desc: "Офіційні логотипи та брендинг платформ",
+      igdbsync_genres_label: "Жанри",
+      igdbsync_genres_desc: "Жанри ігор (Екшн, RPG, Стратегія тощо)",
+      igdbsync_franchises_label: "Франшизи",
+      igdbsync_franchises_desc: "Серії ігор та франшизи (Mario, Call of Duty тощо)",
+      igdbsync_game_engines_label: "Ігрові Движки",
+      igdbsync_game_engines_desc: "Движки розробки ігор (Unity, Unreal тощо)",
+      igdbsync_game_types_label: "Типи Ігор",
+      igdbsync_game_types_desc: "Категорії ігор (Основна Гра, DLC, Розширення тощо)",
+      igdbsync_age_rating_categories_label: "Категорії Вікових Рейтингів",
+      igdbsync_age_rating_categories_desc: "Категорії класифікації вікових рейтингів",
+      igdbsync_games_label: "Ігри",
+      igdbsync_games_desc: "Ігри для вибраної платформи",
+      igdbsync_covers_label: "Обкладинки Ігор",
+      igdbsync_covers_desc: "Обкладинки ігор та мініатюри",
+      igdbsync_screenshots_label: "Скріншоти",
+      igdbsync_screenshots_desc: "Скріншоти ігор та медіа",
+      igdbsync_alternative_names_label: "Альтернативні Назви",
+      igdbsync_alternative_names_desc: "Регіональні та альтернативні назви ігор",
+      igdbsync_multiplayer_modes_label: "Режими Мультиплеєра",
+      igdbsync_multiplayer_modes_desc: "Інформація про онлайн/офлайн мультиплеєр",
+      igdbsync_age_ratings_label: "Вікові Рейтинги",
+      igdbsync_age_ratings_desc: "Дані ESRB, PEGI та інших вікових рейтингів",
+      
+      // Time estimates
+      igdbsync_time_quick: "10-20с",
+      igdbsync_time_short: "30-60с",
+      igdbsync_time_short_medium: "1-3хв",
+      igdbsync_time_medium: "2-5хв",
+      igdbsync_time_medium_long: "2-10хв",
+      igdbsync_time_long: "5-15хв",
+      igdbsync_time_very_long: "10-30хв",
+      
+      // Action buttons and states
+      igdbsync_required: "Обов'язково",
+      igdbsync_sync: "Синхронізувати",
+      igdbsync_resync: "Повторна синхронізація",
+      igdbsync_syncing: "Синхронізація...",
+      igdbsync_syncing_all: "Синхронізація всіх...",
+      igdbsync_sync_all_block: "Синхронізувати всі {{title}}",
+      
+      // Platform selection
+      igdbsync_select_platform: "Вибрати Платформу",
+      igdbsync_select_platform_warning: "Будь ласка, виберіть платформу для активації синхронізації специфічної для платформи.",
+      
+      // Success and error messages
+      igdbsync_success_title: "✅ Синхронізація {{label}} Завершена!",
+      igdbsync_success_message: "Успішно оброблено {{count}} елементів ({{new}} нових, {{updated}} оновлених)",
+      igdbsync_error_title: "❌ Синхронізація {{label}} Невдала",
+      igdbsync_error_unknown: "Сталася невідома помилка",
+      igdbsync_error_network_message: "Помилка мережі або сервер недоступний",
+      igdbsync_error_load_platforms_title: "❌ Не вдалося Завантажити Платформи",
+      igdbsync_error_load_platforms_message: "Не вдалося завантажити підходящі платформи для синхронізації",
+      
+      // Important notes
+      igdbsync_important_notes_title: "⚠️ Важливі Примітки",
+      igdbsync_important_notes_description: "• Почніть з Синхронізації Платформ перед іншими操راціями\n• Синхронізація специфічна для платформи потребує вибору платформи\n• Великі синхронізації (обкладинки, скріншоти) можуть зайняти багато часу\n• Всі операції дотримуються обмежень швидкості IGDB (4 запити/секунду)",
     }
   }
 }

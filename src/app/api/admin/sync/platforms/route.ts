@@ -68,54 +68,63 @@ export async function POST() {
   try {
     const accessToken = await getIGDBAccessToken()
     const platforms = await fetchAllPlatforms(accessToken)
-    
-    console.log('Starting database sync...')
+      console.log('Starting database sync...')
     let syncedCount = 0
     let updatedCount = 0
     
-    for (const platformData of platforms) {
-      try {
-        const existingPlatform = await prisma.igdbPlatform.findUnique({
-          where: { igdbId: platformData.id }
-        })
-        
-        // Store ALL IGDB fields exactly as they come from API
-        const platformRecord = {
-          igdbId: platformData.id,
-          abbreviation: platformData.abbreviation || null,
-          alternative_name: platformData.alternative_name || null,
-          category: platformData.category || null,
-          checksum: platformData.checksum || null,
-          created_at: platformData.created_at ? new Date(platformData.created_at * 1000) : null,
-          generation: platformData.generation || null,
-          name: platformData.name,
-          platform_family: platformData.platform_family || null,
-          platform_logo: platformData.platform_logo || null,
-          platform_type: platformData.platform_type || null,
-          slug: platformData.slug || null,
-          summary: platformData.summary || null,
-          updated_at: platformData.updated_at ? new Date(platformData.updated_at * 1000) : null,
-          url: platformData.url || null,
-          versions: platformData.versions ? JSON.stringify(platformData.versions) : null,
-          websites: platformData.websites ? JSON.stringify(platformData.websites) : null,
-          lastSynced: new Date(),
-        }
-        
-        if (existingPlatform) {
-          await prisma.igdbPlatform.update({
-            where: { igdbId: platformData.id },
-            data: platformRecord
+    // Process platforms in DB batches of 100
+    const dbBatchSize = 100;
+    for (let i = 0; i < platforms.length; i += dbBatchSize) {
+      const batch = platforms.slice(i, i + dbBatchSize);
+      console.log(`Processing DB batch ${Math.floor(i / dbBatchSize) + 1}/${Math.ceil(platforms.length / dbBatchSize)}: ${batch.length} platforms`);
+      
+      for (const platformData of batch) {
+        try {
+          const existingPlatform = await prisma.igdbPlatform.findUnique({
+            where: { igdbId: platformData.id }
           })
-          updatedCount++
-        } else {
-          await prisma.igdbPlatform.create({
-            data: platformRecord
-          })
-          syncedCount++
+          
+          // Store ALL IGDB fields exactly as they come from API
+          const platformRecord = {
+            igdbId: platformData.id,
+            abbreviation: platformData.abbreviation || null,
+            alternative_name: platformData.alternative_name || null,
+            category: platformData.category || null,
+            checksum: platformData.checksum || null,
+            created_at: platformData.created_at ? new Date(platformData.created_at * 1000) : null,
+            generation: platformData.generation || null,
+            name: platformData.name,
+            platform_family: platformData.platform_family || null,
+            platform_logo: platformData.platform_logo || null,
+            platform_type: platformData.platform_type || null,
+            slug: platformData.slug || null,
+            summary: platformData.summary || null,
+            updated_at: platformData.updated_at ? new Date(platformData.updated_at * 1000) : null,            url: platformData.url || null,
+            versions: platformData.versions ? JSON.stringify(platformData.versions) : null,
+            websites: platformData.websites ? JSON.stringify(platformData.websites) : null,
+          }
+          
+          if (existingPlatform) {
+            await prisma.igdbPlatform.update({
+              where: { igdbId: platformData.id },
+              data: platformRecord
+            })
+            updatedCount++
+          } else {
+            await prisma.igdbPlatform.create({
+              data: platformRecord
+            })
+            syncedCount++
+          }
+        } catch (error) {
+          console.error(`Error syncing platform ${platformData.id}:`, error)
+          // Continue with other platforms
         }
-      } catch (error) {
-        console.error(`Error syncing platform ${platformData.id}:`, error)
-        // Continue with other platforms
+      }
+      
+      // Small delay between DB batches
+      if (i + dbBatchSize < platforms.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
     

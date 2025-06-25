@@ -18,11 +18,16 @@ export async function getIGDBAccessToken(): Promise<string> {
 
   // Check if we have a valid cached token
   if (cachedToken && Date.now() < cachedToken.expires_at) {
-    console.log('Using cached IGDB token')
+    const timeLeft = Math.floor((cachedToken.expires_at - Date.now()) / 1000 / 60); // minutes
+    console.log(`Using cached IGDB token (expires in ${timeLeft} minutes)`)
     return cachedToken.access_token
   }
 
-  console.log('Fetching new IGDB token...')
+  if (cachedToken) {
+    console.log('Cached IGDB token expired, fetching new token...')
+  } else {
+    console.log('No cached IGDB token found, fetching new token...')
+  }
   
   try {
     const res = await fetch(
@@ -32,18 +37,20 @@ export async function getIGDBAccessToken(): Promise<string> {
 
     if (!res.ok) {
       throw new Error(`Failed to get IGDB token: ${res.status} ${res.statusText}`)
-    }
-
-    const data = await res.json()
-      // Calculate expiration time (subtract 5 minutes for safety buffer)
-    const expiresAt = Date.now() + (data.expires_in * 1000) - (5 * 60 * 1000)
+    }    const data = await res.json()
+    
+    // Calculate expiration time (subtract 10 minutes for safety buffer)
+    // Use the actual expires_in value from IGDB response
+    const expiresAt = Date.now() + (data.expires_in * 1000) - (10 * 60 * 1000)
     
     cachedToken = {
       ...data,
       expires_at: expiresAt
     }
 
-    console.log(`New IGDB token acquired, expires at: ${new Date(expiresAt).toISOString()}`)
+    const expirationDate = new Date(expiresAt).toISOString()
+    const daysUntilExpiry = Math.floor((data.expires_in - 600) / 86400) // subtract 10 min buffer, convert to days
+    console.log(`New IGDB token acquired, expires in ${data.expires_in} seconds (${daysUntilExpiry} days) at: ${expirationDate}`)
     
     if (!cachedToken) {
       throw new Error('Failed to cache IGDB token')

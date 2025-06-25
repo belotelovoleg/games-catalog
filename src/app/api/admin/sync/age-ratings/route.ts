@@ -58,26 +58,50 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if platform ID is provided in request body
-    const body = await request.json().catch(() => ({}))
-    const platformId = body.platformId
+    // Parse request body to get optional platformId
+    let platformId: number | undefined
+    try {
+      const body = await request.json()
+      platformId = body.platformId
+    } catch (error) {
+      // If no JSON body, that's fine - sync all age ratings
+    }
 
     const accessToken = await getIGDBAccessToken()
 
-    // Get games that have age ratings, optionally filtered by platform
-    let whereClause: any = {
+    // Build query conditions based on platform selection
+    let gameQuery: any = {
       age_ratings: { not: null }, // Games that have age rating IDs in IGDB
     }
 
-    // If platform ID is provided, filter games by platform
+    // If platformId is provided, filter games by platform
     if (platformId) {
-      whereClause.platforms = {
-        contains: `"${platformId}"`  // Search for the platform ID in the JSON array
+      const platform = await prisma.platform.findUnique({ 
+        where: { id: platformId },
+        select: { igdbPlatformId: true, igdbPlatformVersionId: true, name: true }
+      })
+      
+      if (!platform) {
+        return NextResponse.json(
+          { error: 'Platform not found' },
+          { status: 404 }
+        )
       }
+
+      // Filter games by platform
+      gameQuery = {
+        ...gameQuery,
+        OR: [
+          platform.igdbPlatformId ? { platformId: platform.igdbPlatformId } : {},
+          platform.igdbPlatformVersionId ? { platformVersionId: platform.igdbPlatformVersionId } : {}
+        ].filter(condition => Object.keys(condition).length > 0)
+      }
+
+      console.log(`Syncing age ratings for platform: ${platform.name} (IGDB Platform ID: ${platform.igdbPlatformId}, Version ID: ${platform.igdbPlatformVersionId})`)
     }
 
     const gamesNeedingAgeRatings = await prisma.igdbGames.findMany({
-      where: whereClause,
+      where: gameQuery,
       select: { age_ratings: true }
     })
 

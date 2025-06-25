@@ -41,6 +41,8 @@ interface Platform {
   platform_family?: number
   platform_type?: number
   generation?: number
+  igdbPlatformName?: string
+  igdbPlatformVersionName?: string
 }
 
 interface SyncStats {
@@ -203,15 +205,20 @@ export default function IGDBGamesSyncManager() {
       setLoadingStates(prev => ({ ...prev, [loadingKey]: false }))
     }
   }
-
   const formatPlatformInfo = (platform: Platform) => {
+    // Priority: Show IGDB platform name, then version name, then generation
     const parts = []
-    if (platform.versionName && platform.versionName !== platform.name) {
+    
+    if (platform.igdbPlatformName) {
+      parts.push(platform.igdbPlatformName)
+    } else if (platform.versionName && platform.versionName !== platform.name) {
       parts.push(platform.versionName)
     }
+    
     if (platform.generation) {
       parts.push(`Gen ${platform.generation}`)
     }
+    
     return parts.length > 0 ? ` (${parts.join(', ')})` : ''
   }
 

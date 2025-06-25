@@ -160,60 +160,77 @@ async function fetchGamesFromIGDB(platformId: number): Promise<IGDBGame[]> {
 async function saveGamesToDB(games: IGDBGame[], platformInfo: { id: number, igdbPlatformId?: number | null, igdbPlatformVersionId?: number | null }) {
   let newCount = 0
   let updatedCount = 0
-  for (const game of games) {    const gameData = {
-      // Essential game data
-      name: game.name,
-      rating: game.rating || null,
-      storyline: game.storyline || null,
-      url: game.url || null,
-      
-      // Media and images
-      cover: game.cover || null,
-      screenshots: game.screenshots ? JSON.stringify(game.screenshots) : null,
-      
-      // Game companies and credits
-      involved_companies: game.involved_companies ? JSON.stringify(game.involved_companies) : null,
-      
-      // Game content categorization
-      genres: game.genres ? JSON.stringify(game.genres) : null,
-      age_ratings: game.age_ratings ? JSON.stringify(game.age_ratings) : null,
-      alternative_names: game.alternative_names ? JSON.stringify(game.alternative_names) : null,
-      franchise: game.franchise || null,
-      game_engines: game.game_engines ? JSON.stringify(game.game_engines) : null,
-      game_type: game.game_type || null,
-      multiplayer_modes: game.multiplayer_modes ? JSON.stringify(game.multiplayer_modes) : null,
-      
-      // Sync metadata
-      platformId: platformInfo.igdbPlatformId,
-      platformVersionId: platformInfo.igdbPlatformVersionId
-    }
-
-    try {
-      const existingGame = await prisma.igdbGames.findUnique({
-        where: { igdbId: game.id }
-      })
-
-      if (existingGame) {
-        await prisma.igdbGames.update({
-          where: { igdbId: game.id },
-          data: gameData
-        })
-        updatedCount++
-      } else {
-        await prisma.igdbGames.create({
-          data: {
-            igdbId: game.id,
-            ...gameData
-          }
-        })
-        newCount++
+  
+  console.log(`Starting database sync for ${games.length} games...`)
+  
+  // Process games in batches of 100 for better performance
+  const batchSize = 100
+  for (let i = 0; i < games.length; i += batchSize) {
+    const batch = games.slice(i, i + batchSize)
+    console.log(`Processing DB batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(games.length / batchSize)}: ${batch.length} games`)
+    
+    for (const game of batch) {
+      const gameData = {
+        // Essential game data
+        name: game.name,
+        rating: game.rating || null,
+        storyline: game.storyline || null,
+        url: game.url || null,
+        
+        // Media and images
+        cover: game.cover || null,
+        screenshots: game.screenshots ? JSON.stringify(game.screenshots) : null,
+        
+        // Game companies and credits
+        involved_companies: game.involved_companies ? JSON.stringify(game.involved_companies) : null,
+        
+        // Game content categorization
+        genres: game.genres ? JSON.stringify(game.genres) : null,
+        age_ratings: game.age_ratings ? JSON.stringify(game.age_ratings) : null,
+        alternative_names: game.alternative_names ? JSON.stringify(game.alternative_names) : null,
+        franchise: game.franchise || null,
+        game_engines: game.game_engines ? JSON.stringify(game.game_engines) : null,
+        game_type: game.game_type || null,
+        multiplayer_modes: game.multiplayer_modes ? JSON.stringify(game.multiplayer_modes) : null,
+        
+        // Sync metadata
+        platformId: platformInfo.igdbPlatformId,
+        platformVersionId: platformInfo.igdbPlatformVersionId
       }
-    } catch (error) {
-      console.error(`Error saving game ${game.id} (${game.name}):`, error)
-      // Continue with other games even if one fails
+
+      try {
+        const existingGame = await prisma.igdbGames.findUnique({
+          where: { igdbId: game.id }
+        })
+
+        if (existingGame) {
+          await prisma.igdbGames.update({
+            where: { igdbId: game.id },
+            data: gameData
+          })
+          updatedCount++
+        } else {
+          await prisma.igdbGames.create({
+            data: {
+              igdbId: game.id,
+              ...gameData
+            }
+          })
+          newCount++
+        }
+      } catch (error) {
+        console.error(`Error saving game ${game.id} (${game.name}):`, error)
+        // Continue with other games even if one fails
+      }
+    }
+    
+    // Small delay between batches to avoid overwhelming the database
+    if (i + batchSize < games.length) {
+      await new Promise(resolve => setTimeout(resolve, 100))
     }
   }
-
+  
+  console.log(`Database sync completed: ${newCount} new games, ${updatedCount} updated games`)
   return { newCount, updatedCount }
 }
 
@@ -253,23 +270,20 @@ export async function POST(request: NextRequest) {
         { error: 'Platform not found' },
         { status: 404 }
       )
-    }
-
-    if (!platform.igdbPlatformId && !platform.igdbPlatformVersionId) {
+    }    if (!platform.igdbPlatformId) {
       return NextResponse.json(
-        { error: 'Platform has no IGDB platform ID or version ID' },
+        { error: 'Platform has no IGDB platform ID' },
         { status: 400 }
       )
     }
 
-    // Prefer platform version ID over platform ID
-    const igdbPlatformId = platform.igdbPlatformVersionId || platform.igdbPlatformId
+    // Always use platform ID for games query (not platform version ID)
+    // Games in IGDB are associated with platforms, not platform versions
+    const igdbPlatformId = platform.igdbPlatformId
 
     // Fetch games from IGDB
     console.log(`Fetching games for platform ${platform.name} (IGDB ID: ${igdbPlatformId})`)
-    const games = await fetchGamesFromIGDB(igdbPlatformId!)
-
-    // Save games to database
+    const games = await fetchGamesFromIGDB(igdbPlatformId!)    // Save games to database
     const { newCount, updatedCount } = await saveGamesToDB(games, platform)
 
     const platformName = platform.versionName || platform.name
@@ -281,7 +295,7 @@ export async function POST(request: NextRequest) {
       updatedGames: updatedCount,
       platformName,
       igdbPlatformId,
-      usedVersionId: !!platform.igdbPlatformVersionId
+      usedPlatformId: true
     })
 
   } catch (error) {

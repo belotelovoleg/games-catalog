@@ -58,18 +58,58 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessToken = await getIGDBAccessToken()    // Get all games we have that don't have covers synced yet
-    const gamesNeedingCovers = await prisma.igdbGames.findMany({
-      where: {
-        cover: { not: null }, // Games that have a cover ID in IGDB
-        NOT: {
-          cover: {
-            in: await prisma.igdbCovers.findMany({
-              select: { igdbId: true }
-            }).then(covers => covers.map(c => c.igdbId))
-          }
+    // Parse request body to get optional platformId
+    let platformId: number | undefined
+    try {
+      const body = await request.json()
+      platformId = body.platformId
+    } catch (error) {
+      // If no JSON body, that's fine - sync all covers
+    }
+
+    const accessToken = await getIGDBAccessToken()
+    
+    // Build query conditions based on platform selection
+    let gameQuery: any = {
+      cover: { not: null }, // Games that have a cover ID in IGDB
+      NOT: {
+        cover: {
+          in: await prisma.igdbCovers.findMany({
+            select: { igdbId: true }
+          }).then(covers => covers.map(c => c.igdbId))
         }
-      },
+      }
+    }
+
+    // If platformId is provided, filter games by platform
+    if (platformId) {
+      const platform = await prisma.platform.findUnique({ 
+        where: { id: platformId },
+        select: { igdbPlatformId: true, igdbPlatformVersionId: true, name: true }
+      })
+      
+      if (!platform) {
+        return NextResponse.json(
+          { error: 'Platform not found' },
+          { status: 404 }
+        )
+      }
+
+      // Filter games by platform - games are linked to platforms via platformId or platformVersionId
+      gameQuery = {
+        ...gameQuery,
+        OR: [
+          platform.igdbPlatformId ? { platformId: platform.igdbPlatformId } : {},
+          platform.igdbPlatformVersionId ? { platformVersionId: platform.igdbPlatformVersionId } : {}
+        ].filter(condition => Object.keys(condition).length > 0)
+      }
+
+      console.log(`Syncing covers for platform: ${platform.name} (IGDB Platform ID: ${platform.igdbPlatformId}, Version ID: ${platform.igdbPlatformVersionId})`)
+    }
+
+    // Get all games we have that don't have covers synced yet
+    const gamesNeedingCovers = await prisma.igdbGames.findMany({
+      where: gameQuery,
       select: { cover: true },
       distinct: ['cover']
     })
@@ -131,43 +171,55 @@ export async function POST(request: NextRequest) {
       }
 
       const covers = await response.json()
-      console.log(`Fetched ${covers.length} covers, now saving batch to database...`)
-
-      // Process this batch immediately
+      console.log(`Fetched ${covers.length} covers, now saving batch to database...`)      // Process this batch with database batching for better performance
       let newCount = 0
       let updatedCount = 0
 
-      for (const cover of covers) {
-        try {
-          const existingCover = await prisma.igdbCovers.findUnique({
-            where: { igdbId: cover.id }
-          })
+      console.log(`Processing ${covers.length} covers in database batches...`)
+      
+      // Process covers in DB batches of 100
+      const dbBatchSize = 100
+      for (let i = 0; i < covers.length; i += dbBatchSize) {
+        const batch = covers.slice(i, i + dbBatchSize)
+        console.log(`Processing DB batch ${Math.floor(i / dbBatchSize) + 1}/${Math.ceil(covers.length / dbBatchSize)}: ${batch.length} covers`)
+        
+        for (const cover of batch) {
+          try {
+            const existingCover = await prisma.igdbCovers.findUnique({
+              where: { igdbId: cover.id }
+            })
 
-          if (existingCover) {
-            await prisma.igdbCovers.update({
-              where: { igdbId: cover.id },
-              data: {
-                height: cover.height || null,
-                image_id: cover.image_id || null,
-                url: cover.url || null,
-                width: cover.width || null
-              }
-            })
-            updatedCount++
-          } else {
-            await prisma.igdbCovers.create({
-              data: {
-                igdbId: cover.id,
-                height: cover.height || null,
-                image_id: cover.image_id || null,
-                url: cover.url || null,
-                width: cover.width || null
-              }
-            })
-            newCount++
+            if (existingCover) {
+              await prisma.igdbCovers.update({
+                where: { igdbId: cover.id },
+                data: {
+                  height: cover.height || null,
+                  image_id: cover.image_id || null,
+                  url: cover.url || null,
+                  width: cover.width || null
+                }
+              })
+              updatedCount++
+            } else {
+              await prisma.igdbCovers.create({
+                data: {
+                  igdbId: cover.id,
+                  height: cover.height || null,
+                  image_id: cover.image_id || null,
+                  url: cover.url || null,
+                  width: cover.width || null
+                }
+              })
+              newCount++
+            }
+          } catch (error) {
+            console.error(`Error saving cover ${cover.id}:`, error)
           }
-        } catch (error) {
-          console.error(`Error saving cover ${cover.id}:`, error)
+        }
+        
+        // Small delay between DB batches
+        if (i + dbBatchSize < covers.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
         }
       }
 

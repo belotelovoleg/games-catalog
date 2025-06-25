@@ -40,42 +40,49 @@ export async function POST(request: NextRequest) {
     // Sync platform families to database
     let syncedCount = 0;
     let updatedCount = 0;
-
-    for (const family of platformFamilies) {
-      try {
-        const existingFamily = await prisma.igdbPlatformFamily.findUnique({
-          where: { igdbId: family.id }
+    const BATCH_DB_SIZE = 100;
+    // Find all existing IDs
+    const allIds = platformFamilies.map((f: any) => f.id);
+    const existing = await prisma.igdbPlatformFamily.findMany({
+      where: { igdbId: { in: allIds } },
+      select: { igdbId: true, name: true, slug: true }
+    });
+    const existingMap = new Map(existing.map(f => [f.igdbId, f]));
+    const toCreate = platformFamilies.filter((f: any) => !existingMap.has(f.id));
+    const toUpdate = platformFamilies.filter((f: any) => {
+      const ex = existingMap.get(f.id);
+      return ex && (ex.name !== f.name || ex.slug !== f.slug);
+    });
+    // Batch create
+    for (let i = 0; i < toCreate.length; i += BATCH_DB_SIZE) {
+      const batch = toCreate.slice(i, i + BATCH_DB_SIZE);
+      if (batch.length > 0) {
+        await prisma.igdbPlatformFamily.createMany({
+          data: batch.map((f: any) => ({
+            igdbId: f.id,
+            name: f.name,
+            slug: f.slug
+          })),
+          skipDuplicates: true
         });
-
-        if (existingFamily) {
-          // Update existing family if name or slug changed
-          if (existingFamily.name !== family.name || existingFamily.slug !== family.slug) {
-            await prisma.igdbPlatformFamily.update({
-              where: { igdbId: family.id },
-              data: {
-                name: family.name,
-                slug: family.slug
-              }
-            });
-            updatedCount++;
-            console.log(`Updated platform family: ${family.name} (ID: ${family.id})`);
-          }
-        } else {
-          // Create new platform family
-          await prisma.igdbPlatformFamily.create({
-            data: {
-              igdbId: family.id,
-              name: family.name,
-              slug: family.slug
-            }
-          });
-          syncedCount++;
-          console.log(`Added platform family: ${family.name} (ID: ${family.id})`);
-        }
-      } catch (error) {
-        console.error(`Error syncing platform family ${family.id}:`, error);      }
+        syncedCount += batch.length;
+      }
     }
-
+    // Batch update
+    for (let i = 0; i < toUpdate.length; i += BATCH_DB_SIZE) {
+      const batch = toUpdate.slice(i, i + BATCH_DB_SIZE);
+      await Promise.all(batch.map(async (f: any) => {
+        try {
+          await prisma.igdbPlatformFamily.update({
+            where: { igdbId: f.id },
+            data: { name: f.name, slug: f.slug }
+          });
+          updatedCount++;
+        } catch (error) {
+          console.error(`Error updating platform family ${f.id}:`, error);
+        }
+      }));
+    }
     console.log(`Platform families sync completed: ${syncedCount} added, ${updatedCount} updated`);
 
     return NextResponse.json({

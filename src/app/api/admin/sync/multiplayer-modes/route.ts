@@ -58,8 +58,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const accessToken = await getIGDBAccessToken()    // Get all games we have in our DB to limit the sync scope
+    // Parse request body to get optional platformId
+    let platformId: number | undefined
+    try {
+      const body = await request.json()
+      platformId = body.platformId
+    } catch (error) {
+      // If no JSON body, that's fine - sync all multiplayer modes
+    }
+
+    const accessToken = await getIGDBAccessToken()
+    
+    // Build query conditions based on platform selection
+    let gameQuery: any = {}
+
+    // If platformId is provided, filter games by platform
+    if (platformId) {
+      const platform = await prisma.platform.findUnique({ 
+        where: { id: platformId },
+        select: { igdbPlatformId: true, igdbPlatformVersionId: true, name: true }
+      })
+      
+      if (!platform) {
+        return NextResponse.json(
+          { error: 'Platform not found' },
+          { status: 404 }
+        )
+      }
+
+      // Filter games by platform
+      gameQuery = {
+        OR: [
+          platform.igdbPlatformId ? { platformId: platform.igdbPlatformId } : {},
+          platform.igdbPlatformVersionId ? { platformVersionId: platform.igdbPlatformVersionId } : {}
+        ].filter(condition => Object.keys(condition).length > 0)
+      }
+
+      console.log(`Syncing multiplayer modes for platform: ${platform.name} (IGDB Platform ID: ${platform.igdbPlatformId}, Version ID: ${platform.igdbPlatformVersionId})`)
+    }
+
+    // Get all games we have in our DB to limit the sync scope
     const ourGames = await prisma.igdbGames.findMany({
+      where: gameQuery,
       select: { igdbId: true },
       distinct: ['igdbId']
     })
@@ -135,30 +175,22 @@ export async function POST(request: NextRequest) {
     
     let newCount = 0
     let updatedCount = 0
-
-    for (const mode of multiplayerModes) {
-      const existingMode = await prisma.igdbMultiplayerModes.findUnique({
-        where: { igdbId: mode.id }
-      })
-
-      if (existingMode) {        await prisma.igdbMultiplayerModes.update({
-          where: { igdbId: mode.id },
-          data: {
-            lancoop: mode.lancoop || null,
-            offlinecoop: mode.offlinecoop || null,
-            offlinecoopmax: mode.offlinecoopmax || null,
-            offlinemax: mode.offlinemax || null,
-            onlinecoop: mode.onlinecoop || null,
-            onlinecoopmax: mode.onlinecoopmax || null,
-            onlinemax: mode.onlinemax || null,
-            splitscreen: mode.splitscreen || null,
-            splitscreenonline: mode.splitscreenonline || null
-          }
-        })
-        updatedCount++
-      } else {
-        await prisma.igdbMultiplayerModes.create({
-          data: {
+    const BATCH_DB_SIZE = 100
+    // Find all existing IDs
+    const allIds = multiplayerModes.map((m: any) => m.id)
+    const existing = await prisma.igdbMultiplayerModes.findMany({
+      where: { igdbId: { in: allIds } },
+      select: { igdbId: true }
+    })
+    const existingIds = new Set(existing.map(m => m.igdbId))
+    const toCreate = multiplayerModes.filter((m: any) => !existingIds.has(m.id))
+    const toUpdate = multiplayerModes.filter((m: any) => existingIds.has(m.id))
+    // Batch create
+    for (let i = 0; i < toCreate.length; i += BATCH_DB_SIZE) {
+      const batch = toCreate.slice(i, i + BATCH_DB_SIZE)
+      if (batch.length > 0) {
+        await prisma.igdbMultiplayerModes.createMany({
+          data: batch.map((mode: any) => ({
             igdbId: mode.id,
             lancoop: mode.lancoop || null,
             offlinecoop: mode.offlinecoop || null,
@@ -169,10 +201,36 @@ export async function POST(request: NextRequest) {
             onlinemax: mode.onlinemax || null,
             splitscreen: mode.splitscreen || null,
             splitscreenonline: mode.splitscreenonline || null
-          }
+          })),
+          skipDuplicates: true
         })
-        newCount++
+        newCount += batch.length
       }
+    }
+    // Batch update
+    for (let i = 0; i < toUpdate.length; i += BATCH_DB_SIZE) {
+      const batch = toUpdate.slice(i, i + BATCH_DB_SIZE)
+      await Promise.all(batch.map(async (mode: any) => {
+        try {
+          await prisma.igdbMultiplayerModes.update({
+            where: { igdbId: mode.id },
+            data: {
+              lancoop: mode.lancoop || null,
+              offlinecoop: mode.offlinecoop || null,
+              offlinecoopmax: mode.offlinecoopmax || null,
+              offlinemax: mode.offlinemax || null,
+              onlinecoop: mode.onlinecoop || null,
+              onlinecoopmax: mode.onlinecoopmax || null,
+              onlinemax: mode.onlinemax || null,
+              splitscreen: mode.splitscreen || null,
+              splitscreenonline: mode.splitscreenonline || null
+            }
+          })
+          updatedCount++
+        } catch (error) {
+          console.error(`Error updating multiplayer mode ${mode.id}:`, error)
+        }
+      }))
     }
 
     return NextResponse.json({

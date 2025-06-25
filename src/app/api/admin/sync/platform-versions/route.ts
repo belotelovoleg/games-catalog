@@ -91,51 +91,82 @@ export async function POST() {
     console.log('Starting database sync...')
     let syncedCount = 0
     let updatedCount = 0
-      for (const versionData of platformVersions) {
-      try {        const existingVersion = await prisma.igdbPlatformVersion.findUnique({
-          where: { igdbId: versionData.id }
+    const BATCH_DB_SIZE = 100
+    // Find all existing IDs
+    const allIds = platformVersions.map((v: any) => v.id)
+    const existing = await prisma.igdbPlatformVersion.findMany({
+      where: { igdbId: { in: allIds } },
+      select: { igdbId: true, name: true }
+    })
+    const existingMap = new Map(existing.map(v => [v.igdbId, v]))
+    const toCreate = platformVersions.filter((v: any) => !existingMap.has(v.id))
+    const toUpdate = platformVersions.filter((v: any) => existingMap.has(v.id))
+    // Batch create
+    for (let i = 0; i < toCreate.length; i += BATCH_DB_SIZE) {
+      const batch = toCreate.slice(i, i + BATCH_DB_SIZE)
+      if (batch.length > 0) {
+        await prisma.igdbPlatformVersion.createMany({
+          data: batch.map((versionData: any) => ({
+            igdbId: versionData.id,
+            checksum: versionData.checksum || null,
+            companies: versionData.companies ? JSON.stringify(versionData.companies) : null,
+            connectivity: versionData.connectivity || null,
+            cpu: versionData.cpu || null,
+            graphics: versionData.graphics || null,
+            main_manufacturer: versionData.main_manufacturer || null,
+            media: versionData.media || null,
+            memory: versionData.memory || null,
+            name: versionData.name,
+            os: versionData.os || null,
+            output: versionData.output || null,
+            platform_logo: versionData.platform_logo || null,
+            platform_version_release_dates: versionData.platform_version_release_dates ? JSON.stringify(versionData.platform_version_release_dates) : null,
+            resolutions: versionData.resolutions || null,
+            slug: versionData.slug || null,
+            sound: versionData.sound || null,
+            storage: versionData.storage || null,
+            summary: versionData.summary || null,
+            url: versionData.url || null
+          })),
+          skipDuplicates: true
         })
-        
-        // Store ALL IGDB platform_version fields exactly as they come from API
-        const versionRecord = {
-          igdbId: versionData.id,
-          checksum: versionData.checksum || null,
-          companies: versionData.companies ? JSON.stringify(versionData.companies) : null,
-          connectivity: versionData.connectivity || null,
-          cpu: versionData.cpu || null,
-          graphics: versionData.graphics || null,
-          main_manufacturer: versionData.main_manufacturer || null,
-          media: versionData.media || null,
-          memory: versionData.memory || null,
-          name: versionData.name,
-          os: versionData.os || null,
-          output: versionData.output || null,
-          platform_logo: versionData.platform_logo || null,
-          platform_version_release_dates: versionData.platform_version_release_dates ? JSON.stringify(versionData.platform_version_release_dates) : null,
-          resolutions: versionData.resolutions || null,
-          slug: versionData.slug || null,
-          sound: versionData.sound || null,
-          storage: versionData.storage || null,
-          summary: versionData.summary || null,
-          url: versionData.url || null,
-          lastSynced: new Date(),
-        }
-          if (existingVersion) {
+        syncedCount += batch.length
+      }
+    }
+    // Batch update
+    for (let i = 0; i < toUpdate.length; i += BATCH_DB_SIZE) {
+      const batch = toUpdate.slice(i, i + BATCH_DB_SIZE)
+      await Promise.all(batch.map(async (versionData: any) => {
+        try {
           await prisma.igdbPlatformVersion.update({
             where: { igdbId: versionData.id },
-            data: versionRecord
+            data: {
+              checksum: versionData.checksum || null,
+              companies: versionData.companies ? JSON.stringify(versionData.companies) : null,
+              connectivity: versionData.connectivity || null,
+              cpu: versionData.cpu || null,
+              graphics: versionData.graphics || null,
+              main_manufacturer: versionData.main_manufacturer || null,
+              media: versionData.media || null,
+              memory: versionData.memory || null,
+              name: versionData.name,
+              os: versionData.os || null,
+              output: versionData.output || null,
+              platform_logo: versionData.platform_logo || null,
+              platform_version_release_dates: versionData.platform_version_release_dates ? JSON.stringify(versionData.platform_version_release_dates) : null,
+              resolutions: versionData.resolutions || null,
+              slug: versionData.slug || null,
+              sound: versionData.sound || null,
+              storage: versionData.storage || null,
+              summary: versionData.summary || null,
+              url: versionData.url || null
+            }
           })
           updatedCount++
-        } else {
-          await prisma.igdbPlatformVersion.create({
-            data: versionRecord
-          })
-          syncedCount++
+        } catch (error) {
+          console.error(`Error updating platform version ${versionData.id}:`, error)
         }
-      } catch (error) {
-        console.error(`Error syncing platform version ${versionData.id}:`, error)
-        // Continue with other versions
-      }
+      }))
     }
     
     console.log(`Sync completed: ${syncedCount} new, ${updatedCount} updated`)

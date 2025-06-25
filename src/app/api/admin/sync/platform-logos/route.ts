@@ -54,20 +54,42 @@ export async function POST(request: NextRequest) {
       // Process this batch immediately
       let newCount = 0;
       let updatedCount = 0;
-
-      for (const logo of batch) {
-        try {
-          // Compute the standard image URL if image_id exists
-          const computedUrl = logo.image_id ? 
-            `https://images.igdb.com/igdb/image/upload/t_logo_med/${logo.image_id}.png` : 
-            null;
-
-          const existingLogo = await prisma.igdbPlatformLogo.findUnique({
-            where: { igdbId: logo.id }
+      const BATCH_DB_SIZE = 100;
+      // Find all existing IDs in this batch
+      const logoIds = batch.map((logo: any) => logo.id);
+      const existingLogos = await prisma.igdbPlatformLogo.findMany({
+        where: { igdbId: { in: logoIds } },
+        select: { igdbId: true }
+      });
+      const existingIds = new Set(existingLogos.map(l => l.igdbId));
+      const toCreate = batch.filter((logo: any) => !existingIds.has(logo.id));
+      const toUpdate = batch.filter((logo: any) => existingIds.has(logo.id));
+      // Batch create
+      for (let j = 0; j < toCreate.length; j += BATCH_DB_SIZE) {
+        const createBatch = toCreate.slice(j, j + BATCH_DB_SIZE);
+        if (createBatch.length > 0) {
+          await prisma.igdbPlatformLogo.createMany({
+            data: createBatch.map((logo: any) => ({
+              igdbId: logo.id,
+              alpha_channel: logo.alpha_channel,
+              animated: logo.animated,
+              checksum: logo.checksum,
+              height: logo.height,
+              image_id: logo.image_id,
+              url: logo.url,
+              width: logo.width,
+              computed_url: logo.image_id ? `https://images.igdb.com/igdb/image/upload/t_logo_med/${logo.image_id}.png` : null
+            })),
+            skipDuplicates: true
           });
-
-          if (existingLogo) {
-            // Update existing logo
+          newCount += createBatch.length;
+        }
+      }
+      // Batch update
+      for (let j = 0; j < toUpdate.length; j += BATCH_DB_SIZE) {
+        const updateBatch = toUpdate.slice(j, j + BATCH_DB_SIZE);
+        await Promise.all(updateBatch.map(async (logo: any) => {
+          try {
             await prisma.igdbPlatformLogo.update({
               where: { igdbId: logo.id },
               data: {
@@ -78,30 +100,14 @@ export async function POST(request: NextRequest) {
                 image_id: logo.image_id,
                 url: logo.url,
                 width: logo.width,
-                computed_url: computedUrl
+                computed_url: logo.image_id ? `https://images.igdb.com/igdb/image/upload/t_logo_med/${logo.image_id}.png` : null
               }
             });
             updatedCount++;
-          } else {
-            // Create new logo
-            await prisma.igdbPlatformLogo.create({
-              data: {
-                igdbId: logo.id,
-                alpha_channel: logo.alpha_channel,
-                animated: logo.animated,
-                checksum: logo.checksum,
-                height: logo.height,
-                image_id: logo.image_id,
-                url: logo.url,
-                width: logo.width,
-                computed_url: computedUrl
-              }
-            });
-            newCount++;
+          } catch (error) {
+            console.error(`Error updating logo ${logo.id}:`, error);
           }
-        } catch (error) {
-          console.error(`Error syncing logo ${logo.id}:`, error);
-        }
+        }));
       }
 
       totalNewCount += newCount;

@@ -50,9 +50,7 @@ export async function GET(request: NextRequest) {
         { error: 'Admin authentication required' },
         { status: 401 }
       )
-    }
-
-    // Get platforms that have IGDB IDs (either platform ID or platform version ID)
+    }    // Get platforms that have IGDB IDs (either platform ID or platform version ID)
     const platforms = await prisma.platform.findMany({
       where: {
         OR: [
@@ -76,10 +74,40 @@ export async function GET(request: NextRequest) {
       ]
     })
 
+    // Get IGDB platform and version names for each platform
+    const platformsWithIgdbNames = await Promise.all(
+      platforms.map(async (platform) => {
+        let igdbPlatformName = null
+        let igdbPlatformVersionName = null
+
+        // Get IGDB platform name if available
+        if (platform.igdbPlatformId) {
+          const igdbPlatform = await prisma.igdbPlatform.findUnique({
+            where: { igdbId: platform.igdbPlatformId },
+            select: { name: true }
+          })
+          igdbPlatformName = igdbPlatform?.name || null
+        }
+
+        // Get IGDB platform version name if available
+        if (platform.igdbPlatformVersionId) {
+          const igdbPlatformVersion = await prisma.igdbPlatformVersion.findUnique({
+            where: { igdbId: platform.igdbPlatformVersionId },
+            select: { name: true }
+          })
+          igdbPlatformVersionName = igdbPlatformVersion?.name || null
+        }        return {
+          ...platform,
+          igdbPlatformName,
+          igdbPlatformVersionName
+        }
+      })
+    )
+
     return NextResponse.json({
       success: true,
-      platforms,
-      count: platforms.length
+      platforms: platformsWithIgdbNames,
+      count: platformsWithIgdbNames.length
     })
 
   } catch (error) {
