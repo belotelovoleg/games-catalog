@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogTitle,
@@ -28,6 +29,26 @@ import {
   useTheme
 } from '@mui/material'
 import { Close as CloseIcon, ChevronLeft, ChevronRight } from '@mui/icons-material'
+import { useLanguage } from '../../contexts/LanguageContext'
+
+// Helper function to format dates based on language
+const formatDate = (dateString: string, language: string): string => {
+  const date = new Date(dateString)
+  
+  if (language === 'uk') {
+    return date.toLocaleDateString('uk-UA', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  } else {
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
+}
 
 interface UserGame {
   id: number
@@ -133,6 +154,7 @@ export default function GameDetailDialog({
   loadingDetails = false
 }: GameDetailDialogProps) {
   const theme = useTheme()
+  const { t, language } = useLanguage()
   const [editing, setEditing] = useState(false)
   const [editedName, setEditedName] = useState('')
   const [editedRating, setEditedRating] = useState<number | null>(null)
@@ -231,10 +253,19 @@ export default function GameDetailDialog({
     setEditing(false)
     setError(null)
   }
-
   const formatCondition = (condition: string | null) => {
-    if (!condition) return 'N/A'
-    return condition.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+    if (!condition) return t('gamedetail_condition_not_specified')
+    switch (condition) {
+      case 'SEALED': return t('gamedetail_condition_sealed')
+      case 'MINT': return t('gamedetail_condition_mint')
+      case 'NEAR_MINT': return t('gamedetail_condition_near_mint')
+      case 'EXCELLENT': return t('gamedetail_condition_excellent')
+      case 'VERY_GOOD': return t('gamedetail_condition_very_good')
+      case 'GOOD': return t('gamedetail_condition_good')
+      case 'FAIR': return t('gamedetail_condition_fair')
+      case 'POOR': return t('gamedetail_condition_poor')
+      default: return condition.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+    }
   }
   const parseJsonField = (field: string | null): string[] => {
     if (!field) return []
@@ -423,12 +454,11 @@ export default function GameDetailDialog({
               position: 'sticky',
               top: (game.igdbDetails as any)?.coverDetails ? '420px' : '0'
             }}>
-              <CardContent sx={{ p: 2 }}>
-                <Typography variant="h6" gutterBottom color="primary" sx={{ 
+              <CardContent sx={{ p: 2 }}>                <Typography variant="h6" gutterBottom color="primary" sx={{ 
                   fontWeight: 600,
                   mb: 2
                 }}>
-                  Quick Info
+                  {t('gamedetail_quick_info')}
                 </Typography>
                   {game.igdbDetails?.rating && (
                   <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>                    <Chip 
@@ -437,18 +467,15 @@ export default function GameDetailDialog({
                       size="small"
                       onClick={() => {}}
                       sx={{ fontWeight: 600 }}
-                    />
-                    <Typography variant="body2" color="text.secondary">
-                      IGDB Rating
+                    />                    <Typography variant="body2" color="text.secondary">
+                      {t('gamedetail_igdb_rating')}
                     </Typography>
                   </Box>
-                )}
-
-                {(game.igdbDetails as any)?.franchiseDetails && (
+                )}                {(game.igdbDetails as any)?.franchiseDetails && (
                   <Box sx={{ mb: 1.5 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      <strong>Franchise</strong>
-                    </Typography>                    <Chip 
+                      <strong>{t('gamedetail_franchise_label')}</strong>
+                    </Typography><Chip 
                       label={(game.igdbDetails as any).franchiseDetails.name} 
                       variant="outlined" 
                       size="small" 
@@ -456,13 +483,11 @@ export default function GameDetailDialog({
                       onClick={() => {}}
                     />
                   </Box>
-                )}
-
-                {(game.igdbDetails as any)?.gameTypeDetails && (
+                )}                {(game.igdbDetails as any)?.gameTypeDetails && (
                   <Box sx={{ mb: 1 }}>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                      <strong>Game Type</strong>
-                    </Typography>                    <Chip 
+                      <strong>{t('gamedetail_game_type_label')}</strong>
+                    </Typography><Chip 
                       label={(game.igdbDetails as any).gameTypeDetails.type} 
                       variant="outlined" 
                       size="small" 
@@ -488,69 +513,61 @@ export default function GameDetailDialog({
               color: 'white',
               '& .MuiCardContent-root': { p: 3 }
             }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ 
+              <CardContent>                <Typography variant="h6" gutterBottom sx={{ 
                   color: 'white',
                   fontWeight: 600,
                   mb: 2
                 }}>
-                  Your Collection Info
+                  {t('gamedetail_collection_info')}
                 </Typography>
             
             {editing ? (
-              <Stack spacing={2}>
-                <TextField
+              <Stack spacing={2}>                <TextField
                   fullWidth
-                  label="Game Name"
+                  label={t('gamedetail_game_name_label')}
                   value={editedName}
                   onChange={(e) => setEditedName(e.target.value)}
                 />
-                
-                <TextField
+                  <TextField
                   fullWidth
-                  label="Rating (0-100)"
+                  label={t('gamedetail_rating_label')}
                   type="number"
                   value={editedRating || ''}
                   onChange={(e) => setEditedRating(e.target.value ? parseFloat(e.target.value) : null)}
                   inputProps={{ min: 0, max: 100 }}
-                />
-
-                <FormControl fullWidth>
-                  <InputLabel>Status</InputLabel>
+                />                <FormControl fullWidth>
+                  <InputLabel>{t('gamedetail_status_label')}</InputLabel>
                   <Select
                     value={editedStatus}
-                    label="Status"
+                    label={t('gamedetail_status_label')}
                     onChange={(e) => setEditedStatus(e.target.value as 'OWNED' | 'WISHLISTED')}
                   >
-                    <MenuItem value="OWNED">Owned</MenuItem>
-                    <MenuItem value="WISHLISTED">Wishlisted</MenuItem>
+                    <MenuItem value="OWNED">{t('gamedetail_status_owned')}</MenuItem>
+                    <MenuItem value="WISHLISTED">{t('gamedetail_status_wishlisted')}</MenuItem>
                   </Select>
                 </FormControl>
 
-                {editedStatus === 'OWNED' && (
-                  <FormControl fullWidth>
-                    <InputLabel>Condition</InputLabel>
+                {editedStatus === 'OWNED' && (                  <FormControl fullWidth>
+                    <InputLabel>{t('gamedetail_condition_label')}</InputLabel>
                     <Select
                       value={editedCondition}
-                      label="Condition"
+                      label={t('gamedetail_condition_label')}
                       onChange={(e) => setEditedCondition(e.target.value)}
                     >
-                      <MenuItem value="">Not specified</MenuItem>
-                      <MenuItem value="SEALED">Sealed</MenuItem>
-                      <MenuItem value="MINT">Mint</MenuItem>
-                      <MenuItem value="NEAR_MINT">Near Mint</MenuItem>
-                      <MenuItem value="EXCELLENT">Excellent</MenuItem>
-                      <MenuItem value="VERY_GOOD">Very Good</MenuItem>
-                      <MenuItem value="GOOD">Good</MenuItem>
-                      <MenuItem value="FAIR">Fair</MenuItem>
-                      <MenuItem value="POOR">Poor</MenuItem>
+                      <MenuItem value="">{t('gamedetail_condition_not_specified')}</MenuItem>
+                      <MenuItem value="SEALED">{t('gamedetail_condition_sealed')}</MenuItem>
+                      <MenuItem value="MINT">{t('gamedetail_condition_mint')}</MenuItem>
+                      <MenuItem value="NEAR_MINT">{t('gamedetail_condition_near_mint')}</MenuItem>
+                      <MenuItem value="EXCELLENT">{t('gamedetail_condition_excellent')}</MenuItem>
+                      <MenuItem value="VERY_GOOD">{t('gamedetail_condition_very_good')}</MenuItem>
+                      <MenuItem value="GOOD">{t('gamedetail_condition_good')}</MenuItem>
+                      <MenuItem value="FAIR">{t('gamedetail_condition_fair')}</MenuItem>
+                      <MenuItem value="POOR">{t('gamedetail_condition_poor')}</MenuItem>
                     </Select>
                   </FormControl>
-                )}
-
-                <TextField
+                )}                <TextField
                   fullWidth
-                  label="Notes"
+                  label={t('gamedetail_notes_label')}
                   multiline
                   rows={3}
                   value={editedNotes}
@@ -558,11 +575,10 @@ export default function GameDetailDialog({
                 />
               </Stack>            ) : (
               <Stack spacing={2}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
-                    Status:
-                  </Typography>                  <Chip 
-                    label={game.status} 
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>                  <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
+                    {t('gamedetail_status')}
+                  </Typography><Chip 
+                    label={game.status === 'OWNED' ? t('gamedetail_status_owned') : t('gamedetail_status_wishlisted')} 
                     color={game.status === 'OWNED' ? 'success' : 'warning'} 
                     size="small" 
                     onClick={() => {}}
@@ -571,10 +587,9 @@ export default function GameDetailDialog({
                 </Box>
                 
                 {game.status === 'OWNED' && game.condition && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                    <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
-                      Condition:
-                    </Typography>                    <Chip 
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>                    <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
+                      {t('gamedetail_condition')}
+                    </Typography><Chip 
                       label={formatCondition(game.condition)} 
                       variant="outlined" 
                       size="small"
@@ -588,11 +603,10 @@ export default function GameDetailDialog({
                   </Box>
                 )}
 
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                  <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
-                    Your Rating:
-                  </Typography>                  <Chip 
-                    label={game.rating ? `${Math.round(game.rating)}/100` : 'Not rated'} 
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>                  <Typography variant="body1" sx={{ color: 'white', fontWeight: 500 }}>
+                    {t('gamedetail_your_rating')}:
+                  </Typography><Chip 
+                    label={game.rating ? `${Math.round(game.rating)}/100` : t('gamedetail_not_rated')} 
                     variant="outlined" 
                     size="small"
                     onClick={() => {}}
@@ -603,11 +617,10 @@ export default function GameDetailDialog({
                     }}
                   />
                 </Box>
-                
-                {game.notes && (
+                  {game.notes && (
                   <Box>
                     <Typography variant="body1" sx={{ color: 'white', fontWeight: 500, mb: 1 }}>
-                      Notes:
+                      {t('gamedetail_notes_display_label')}
                     </Typography>
                     <Typography variant="body2" sx={{ 
                       color: 'rgba(255,255,255,0.9)', 
@@ -619,18 +632,12 @@ export default function GameDetailDialog({
                       {game.notes}
                     </Typography>
                   </Box>
-                )}
-
-                <Typography variant="body2" sx={{ 
+                )}                <Typography variant="body2" sx={{ 
                   color: 'rgba(255,255,255,0.7)', 
                   fontSize: '0.8rem',
                   mt: 1
                 }}>
-                  Added: {new Date(game.createdAt).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
+                  {t('gamedetail_added_on')} {formatDate(game.createdAt, language)}
                 </Typography>
               </Stack>
             )}
@@ -649,15 +656,14 @@ export default function GameDetailDialog({
                   fontWeight: 600,
                   mb: 2
                 }}>
-                  Add to Your Collection
+                  {t('gamedetail_add_to_collection')}
                 </Typography>
                 
-                <Stack spacing={2.5}>
-                  <FormControl fullWidth>
-                    <InputLabel sx={{ color: 'rgba(255,255,255,0.8)' }}>Status</InputLabel>
+                <Stack spacing={2.5}>                  <FormControl fullWidth>
+                    <InputLabel sx={{ color: 'rgba(255,255,255,0.8)' }}>{t('gamedetail_status_label')}</InputLabel>
                     <Select
                       value={addGameStatus}
-                      label="Status"
+                      label={t('gamedetail_status_label')}
                       onChange={(e) => setAddGameStatus(e.target.value as 'OWNED' | 'WISHLISTED')}
                       sx={{
                         color: 'white',
@@ -672,17 +678,16 @@ export default function GameDetailDialog({
                         },
                       }}
                     >
-                      <MenuItem value="OWNED">Owned</MenuItem>
-                      <MenuItem value="WISHLISTED">Wishlisted</MenuItem>
+                      <MenuItem value="OWNED">{t('gamedetail_status_owned')}</MenuItem>
+                      <MenuItem value="WISHLISTED">{t('gamedetail_status_wishlisted')}</MenuItem>
                     </Select>
                   </FormControl>
 
-                  {addGameStatus === 'OWNED' && (
-                    <FormControl fullWidth>
-                      <InputLabel sx={{ color: 'rgba(255,255,255,0.8)' }}>Condition</InputLabel>
+                  {addGameStatus === 'OWNED' && (                    <FormControl fullWidth>
+                      <InputLabel sx={{ color: 'rgba(255,255,255,0.8)' }}>{t('gamedetail_condition_label')}</InputLabel>
                       <Select
                         value={addGameCondition}
-                        label="Condition"
+                        label={t('gamedetail_condition_label')}
                         onChange={(e) => setAddGameCondition(e.target.value)}
                         sx={{
                           color: 'white',
@@ -697,14 +702,14 @@ export default function GameDetailDialog({
                           },
                         }}
                       >
-                        <MenuItem value="SEALED">Sealed</MenuItem>
-                        <MenuItem value="MINT">Mint</MenuItem>
-                        <MenuItem value="NEAR_MINT">Near Mint</MenuItem>
-                        <MenuItem value="EXCELLENT">Excellent</MenuItem>
-                        <MenuItem value="VERY_GOOD">Very Good</MenuItem>
-                        <MenuItem value="GOOD">Good</MenuItem>
-                        <MenuItem value="FAIR">Fair</MenuItem>
-                        <MenuItem value="POOR">Poor</MenuItem>
+                        <MenuItem value="SEALED">{t('gamedetail_condition_sealed')}</MenuItem>
+                        <MenuItem value="MINT">{t('gamedetail_condition_mint')}</MenuItem>
+                        <MenuItem value="NEAR_MINT">{t('gamedetail_condition_near_mint')}</MenuItem>
+                        <MenuItem value="EXCELLENT">{t('gamedetail_condition_excellent')}</MenuItem>
+                        <MenuItem value="VERY_GOOD">{t('gamedetail_condition_very_good')}</MenuItem>
+                        <MenuItem value="GOOD">{t('gamedetail_condition_good')}</MenuItem>
+                        <MenuItem value="FAIR">{t('gamedetail_condition_fair')}</MenuItem>
+                        <MenuItem value="POOR">{t('gamedetail_condition_poor')}</MenuItem>
                       </Select>
                     </FormControl>
                   )}
@@ -714,19 +719,17 @@ export default function GameDetailDialog({
           )}          {/* IGDB Information */}
           {game.igdbDetails && (
             <Card>
-              <CardContent sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom color="primary" sx={{ 
+              <CardContent sx={{ p: 3 }}>                <Typography variant="h6" gutterBottom color="primary" sx={{ 
                   fontWeight: 600,
                   mb: 2
                 }}>
-                  Game Information (IGDB)
+                  {t('gamedetail_igdb_info_title')}
                 </Typography>
-                
-                {game.igdbDetails.rating && (
+                  {game.igdbDetails.rating && (
                   <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>IGDB Rating:</strong>
-                    </Typography>                    <Chip 
+                      <strong>{t('gamedetail_igdb_rating_label')}</strong>
+                    </Typography><Chip 
                       label={`${Math.round(game.igdbDetails.rating)}/100`} 
                       color="primary" 
                       size="small"
@@ -743,9 +746,8 @@ export default function GameDetailDialog({
                     borderRadius: 2,
                     borderLeft: 4,
                     borderColor: 'primary.main'
-                  }}>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
-                      Description
+                  }}>                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+                      {t('gamedetail_description_label')}
                     </Typography>
                     <Typography variant="body1" sx={{ 
                       lineHeight: 1.6,
@@ -754,11 +756,11 @@ export default function GameDetailDialog({
                       {game.igdbDetails.storyline}
                     </Typography>
                   </Box>
-                )}{/* Genres */}
+                )}                {/* Genres */}
                 {(game.igdbDetails as any).genreDetails && (game.igdbDetails as any).genreDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" gutterBottom>
-                      <strong>Genres:</strong>
+                      <strong>{t('gamedetail_genres_label')}</strong>
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).genreDetails.map((genre: any) => (
                         <Chip 
@@ -772,13 +774,11 @@ export default function GameDetailDialog({
                       ))}
                     </Box>
                   </Box>
-                )}
-
-                {/* Companies */}
+                )}                {/* Companies */}
                 {(game.igdbDetails as any).companyDetails && (game.igdbDetails as any).companyDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" gutterBottom>
-                      <strong>Companies:</strong>
+                      <strong>{t('gamedetail_companies_label')}</strong>
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).companyDetails.map((company: any) => (
                         <Chip 
@@ -792,20 +792,16 @@ export default function GameDetailDialog({
                       ))}
                     </Box>
                   </Box>
-                )}
-
-                {/* Franchise */}
+                )}                {/* Franchise */}
                 {(game.igdbDetails as any).franchiseDetails && (
                   <Typography variant="body2" gutterBottom>
-                    <strong>Franchise:</strong> {(game.igdbDetails as any).franchiseDetails.name}
+                    <strong>{t('gamedetail_franchise_detail_label')}</strong> {(game.igdbDetails as any).franchiseDetails.name}
                   </Typography>
-                )}
-
-                {/* Multiplayer Modes */}
+                )}                {/* Multiplayer Modes */}
                 {(game.igdbDetails as any).multiplayerModeDetails && (game.igdbDetails as any).multiplayerModeDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" gutterBottom>
-                      <strong>Multiplayer:</strong>
+                      <strong>{t('gamedetail_multiplayer_label')}</strong>
                     </Typography>
                     <Box sx={{ pl: 2 }}>
                       {(game.igdbDetails as any).multiplayerModeDetails.map((mode: any) => (
@@ -819,15 +815,14 @@ export default function GameDetailDialog({
                 {(game.igdbDetails as any).screenshotDetails && (game.igdbDetails as any).screenshotDetails.length > 0 && (
                   <Box sx={{ mb: 3 }}>
                     <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-                      Screenshots ({(game.igdbDetails as any).screenshotDetails.length})
-                    </Typography>
-                    <Box sx={{ 
+                      {t('gamedetail_screenshots_label')} ({(game.igdbDetails as any).screenshotDetails.length})
+                    </Typography>                    <Box sx={{ 
                       display: 'grid',
-                      gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)' },
+                      gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)' },
                       gap: 1.5,
                       mb: 2
                     }}>
-                      {(game.igdbDetails as any).screenshotDetails.slice(0, 8).map((screenshot: any, index: number) => (                        <Box
+                      {(game.igdbDetails as any).screenshotDetails.slice(0, 2).map((screenshot: any, index: number) => (<Box
                           key={screenshot.igdbId}
                           sx={{
                             aspectRatio: '16/9',
@@ -858,56 +853,53 @@ export default function GameDetailDialog({
                           tabIndex={0}
                           role="button"
                           aria-label={`View screenshot ${index + 1} in gallery`}
-                        >
-                          <img
-                            src={`https://images.igdb.com/igdb/image/upload/t_thumb/${screenshot.image_id}.jpg`}
+                        >                          <img
+                            src={`https://images.igdb.com/igdb/image/upload/t_screenshot_med/${screenshot.image_id}.jpg`}
                             alt={`Screenshot ${index + 1}`}
                             style={{ 
                               width: '100%', 
                               height: '100%', 
                               objectFit: 'cover',
+                              objectPosition: 'center'
                             }}
                             loading="lazy"
                           />
                         </Box>
                       ))}
-                    </Box>
-                    <Typography 
-                      variant="caption" 
-                      color="primary" 
-                      sx={{ 
-                        display: 'block',
-                        textAlign: 'center',
-                        cursor: 'pointer',
-                        p: 1,
-                        borderRadius: 1,
-                        backgroundColor: 'primary.main',
-                        color: 'white',
-                        fontWeight: 600,
-                        transition: 'background-color 0.2s',
-                        '&:hover': { 
-                          backgroundColor: 'primary.dark'
-                        }
-                      }}
-                      onClick={() => openGallery(0)}
-                    >
-                      View Full Gallery ({(game.igdbDetails as any).screenshotDetails.length} images)
-                    </Typography>
+                    </Box>                    {(game.igdbDetails as any).screenshotDetails.length > 2 && (
+                      <Typography 
+                        variant="caption" 
+                        color="primary" 
+                        sx={{ 
+                          display: 'block',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          p: 1,
+                          borderRadius: 1,
+                          backgroundColor: 'primary.main',
+                          color: 'primary.contrastText',
+                          fontWeight: 600,
+                          transition: 'background-color 0.2s',
+                          '&:hover': { 
+                            backgroundColor: 'primary.dark'
+                          }
+                        }}
+                        onClick={() => openGallery(0)}
+                      >
+                        {t('gamedetail_view_full_gallery')} ({(game.igdbDetails as any).screenshotDetails.length} {t('gamedetail_images_count')})
+                      </Typography>
+                    )}
                   </Box>
-                )}
-
-                {/* Game Type */}
+                )}                {/* Game Type */}
                 {(game.igdbDetails as any).gameTypeDetails && (
                   <Typography variant="body2" gutterBottom>
-                    <strong>Game Type:</strong> {(game.igdbDetails as any).gameTypeDetails.type}
+                    <strong>{t('gamedetail_game_type_detail_label')}</strong> {(game.igdbDetails as any).gameTypeDetails.type}
                   </Typography>
-                )}
-
-                {/* Age Ratings */}
+                )}                {/* Age Ratings */}
                 {(game.igdbDetails as any).ageRatingDetails && (game.igdbDetails as any).ageRatingDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" gutterBottom>
-                      <strong>Age Ratings:</strong>
+                      <strong>{t('gamedetail_age_ratings_label')}</strong>
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).ageRatingDetails.map((rating: any) => (
                         <Chip 
@@ -921,13 +913,11 @@ export default function GameDetailDialog({
                       ))}
                     </Box>
                   </Box>
-                )}
-
-                {/* Alternative Names */}
+                )}                {/* Alternative Names */}
                 {(game.igdbDetails as any).alternativeNameDetails && (game.igdbDetails as any).alternativeNameDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" gutterBottom>
-                      <strong>Alternative Names:</strong>
+                      <strong>{t('gamedetail_alternative_names_label')}</strong>
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).alternativeNameDetails.map((altName: any) => (
                         <Chip 
@@ -941,13 +931,11 @@ export default function GameDetailDialog({
                       ))}
                     </Box>
                   </Box>
-                )}
-
-                {/* Game Engines */}
+                )}                {/* Game Engines */}
                 {(game.igdbDetails as any).gameEngineDetails && (game.igdbDetails as any).gameEngineDetails.length > 0 && (
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" gutterBottom>
-                      <strong>Game Engines:</strong>
+                      <strong>{t('gamedetail_game_engines_label')}</strong>
                     </Typography>
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>                      {(game.igdbDetails as any).gameEngineDetails.map((engine: any) => (
                         <Chip 
@@ -974,7 +962,7 @@ export default function GameDetailDialog({
                 }
               }}
             >
-              This is a custom game not from IGDB. Only your personal information is available.
+              {t('gamedetail_custom_game_info')}
             </Alert>
           )}
             </Stack>
@@ -988,14 +976,13 @@ export default function GameDetailDialog({
         gap: 1
       }}>
         {isPreviewMode ? (
-          <>
-            <Button 
+          <>            <Button 
               onClick={onClose} 
               disabled={addingGame}
               variant="outlined"
               sx={{ minWidth: 120 }}
             >
-              Close Preview
+              {t('gamedetail_close_preview')}
             </Button>
             {onGameAdded && platformId && (
               <Button 
@@ -1014,19 +1001,18 @@ export default function GameDetailDialog({
                 }}
                 startIcon={addingGame ? <CircularProgress size={16} color="inherit" /> : null}
               >
-                {addingGame ? 'Adding...' : 'Add to Collection'}
+                {addingGame ? t('gamedetail_adding') : t('gamedetail_add_to_collection_button')}
               </Button>
             )}
           </>
         ) : editing ? (
-          <>
-            <Button 
+          <>            <Button 
               onClick={handleCancel} 
               disabled={loading}
               variant="outlined"
               sx={{ minWidth: 100 }}
             >
-              Cancel
+              {t('gamedetail_cancel')}
             </Button>
             <Button 
               onClick={handleSave} 
@@ -1035,24 +1021,23 @@ export default function GameDetailDialog({
               sx={{ minWidth: 120 }}
               startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
             >
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('gamedetail_saving') : t('gamedetail_save_changes')}
             </Button>
           </>
         ) : (
-          <>
-            <Button 
+          <>            <Button 
               onClick={onClose}
               variant="outlined"
               sx={{ minWidth: 100 }}
             >
-              Close
+              {t('gamedetail_close')}
             </Button>
             <Button 
               onClick={handleEdit} 
               variant="contained"
               sx={{ minWidth: 100 }}
             >
-              Edit
+              {t('gamedetail_edit')}
             </Button>
           </>
         )}
@@ -1098,9 +1083,8 @@ export default function GameDetailDialog({
             px: { xs: 2, md: 0 },
             bgcolor: { xs: 'rgba(0,0,0,0.8)', md: 'transparent' },
             color: { xs: 'white', md: 'inherit' }
-          }}>
-            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
-              Screenshots ({selectedImageIndex + 1}/{(game!.igdbDetails as any)?.screenshotDetails?.length || 0})
+          }}>            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
+              {t('gamedetail_screenshots_label')} ({selectedImageIndex + 1}/{(game!.igdbDetails as any)?.screenshotDetails?.length || 0})
             </Typography>
             <IconButton 
               onClick={closeGallery}
