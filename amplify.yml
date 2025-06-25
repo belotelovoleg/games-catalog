@@ -8,7 +8,23 @@ applications:
             - npx prisma generate
         build:
           commands:
-            - npm run build
+        - echo "Building with environment variables for SSR..."
+        - echo "NODE_ENV=$NODE_ENV"
+        - echo "DATABASE_URL exists:" $(if [ -n "$DATABASE_URL" ]; then echo "YES"; else echo "NO"; fi)
+        - echo "IGDB_CLIENT_ID exists:" $(if [ -n "$IGDB_CLIENT_ID" ]; then echo "YES"; else echo "NO"; fi)
+        - echo "JWT_SECRET exists:" $(if [ -n "$JWT_SECRET" ]; then echo "YES"; else echo "NO"; fi)
+        - echo "IGDB_CLIENT_SECRET exists:" $(if [ -n "$IGDB_CLIENT_SECRET" ]; then echo "YES"; else echo "NO"; fi)
+        - echo "NEXTAUTH_URL exists:" $(if [ -n "$NEXTAUTH_URL" ]; then echo "YES"; else echo "NO"; fi)
+        - echo "📝 Creating .env.production file with environment variables..."
+        - echo "DATABASE_URL=$DATABASE_URL" > .env.production
+        - echo "JWT_SECRET=$JWT_SECRET" >> .env.production
+        - echo "IGDB_CLIENT_SECRET=$IGDB_CLIENT_SECRET" >> .env.production
+        - echo "IGDB_CLIENT_ID=$IGDB_CLIENT_ID" >> .env.production
+        - echo "NEXTAUTH_URL=$NEXTAUTH_URL" >> .env.production
+        - echo "NODE_ENV=production" >> .env.production
+        - echo "✅ Created .env.production with $(wc -l < .env.production) variables"
+        - cat .env.production
+        - npm run build
       artifacts:
         baseDirectory: .next
         files:
