@@ -282,6 +282,16 @@ export default function IGDBComprehensiveSync() {
       endpoint: 'age-ratings',
       estimated: '2-5min',
       estimatedKey: 'igdbsync_time_medium'
+    },
+    {
+      id: 'artworks',
+      label: 'Artworks',
+      labelKey: 'igdbsync_artworks_label',
+      description: 'Game artworks and concept art',
+      descriptionKey: 'igdbsync_artworks_desc',
+      endpoint: 'artworks',
+      estimated: '5-15min',
+      estimatedKey: 'igdbsync_time_long'
     }
   ]
 
@@ -692,3 +702,7 @@ export default function IGDBComprehensiveSync() {
     </>
   )
 }
+
+// Add to your i18n translation files:
+// "igdbsync_artworks_label": "Artworks",
+// "igdbsync_artworks_desc": "Game artworks and concept art",

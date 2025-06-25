@@ -29,7 +29,8 @@ export async function GET(
       involved_companies: game.involved_companies ? JSON.parse(game.involved_companies) : null,
       multiplayer_modes: game.multiplayer_modes ? JSON.parse(game.multiplayer_modes) : null,
       age_ratings: game.age_ratings ? JSON.parse(game.age_ratings) : null,
-      game_engines: game.game_engines ? JSON.parse(game.game_engines) : null
+      game_engines: game.game_engines ? JSON.parse(game.game_engines) : null,
+      artworks: game.artworks ? JSON.parse(game.artworks) : null
     }
 
     // Fetch cover details if cover ID exists
@@ -43,6 +44,13 @@ export async function GET(
     if (enrichedGame.screenshots && Array.isArray(enrichedGame.screenshots)) {
       screenshotDetails = await prisma.igdbScreenshots.findMany({
         where: { igdbId: { in: enrichedGame.screenshots } }
+      })
+    }
+    // Fetch artwork details if artwork IDs exist
+    let artworkDetails: any[] = []
+    if (enrichedGame.artworks && Array.isArray(enrichedGame.artworks)) {
+      artworkDetails = await prisma.igdbArtworks.findMany({
+        where: { igdbId: { in: enrichedGame.artworks } }
       })
     }
 
@@ -128,6 +136,7 @@ export async function GET(
       ...enrichedGame,
       coverDetails,
       screenshotDetails,
+      artworkDetails,
       genreDetails,
       companyDetails,
       franchiseDetails,

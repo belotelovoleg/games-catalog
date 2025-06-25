@@ -166,6 +166,9 @@ export default function GameDetailDialog({
   // Gallery state
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  // Artworks gallery state
+  const [artworkGalleryOpen, setArtworkGalleryOpen] = useState(false)
+  const [selectedArtworkIndex, setSelectedArtworkIndex] = useState(0)
   // Add game from preview state
   const [addingGame, setAddingGame] = useState(false)
   const [addGameStatus, setAddGameStatus] = useState<'OWNED' | 'WISHLISTED'>('OWNED')
@@ -295,6 +298,25 @@ export default function GameDetailDialog({
     if (!game) return
     const screenshots = (game.igdbDetails as any)?.screenshotDetails || []
     setSelectedImageIndex((prev) => (prev - 1 + screenshots.length) % screenshots.length)
+  }
+
+  // Artworks gallery functions
+  const openArtworkGallery = (index: number = 0) => {
+    setSelectedArtworkIndex(index)
+    setArtworkGalleryOpen(true)
+  }
+  const closeArtworkGallery = () => {
+    setArtworkGalleryOpen(false)
+  }
+  const nextArtwork = () => {
+    if (!game) return
+    const artworks = (game.igdbDetails as any)?.artworkDetails || []
+    setSelectedArtworkIndex((prev) => (prev + 1) % artworks.length)
+  }
+  const prevArtwork = () => {
+    if (!game) return
+    const artworks = (game.igdbDetails as any)?.artworkDetails || []
+    setSelectedArtworkIndex((prev) => (prev - 1 + artworks.length) % artworks.length)
   }
 
   // Add game from preview functionality
@@ -890,6 +912,89 @@ export default function GameDetailDialog({
                       </Typography>
                     )}
                   </Box>
+                )}                {/* Artworks */}
+                {(game.igdbDetails as any).artworkDetails && (game.igdbDetails as any).artworkDetails.length > 0 && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="body2" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                      {t('gamedetail_artworks_label')} ({(game.igdbDetails as any).artworkDetails.length})
+                    </Typography>
+                    <Box sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)' },
+                      gap: 1.5,
+                      mb: 2
+                    }}>
+                      {(game.igdbDetails as any).artworkDetails.slice(0, 2).map((artwork: any, index: number) => (
+                        <Box
+                          key={artwork.igdbId}
+                          sx={{
+                            aspectRatio: '16/9',
+                            cursor: 'pointer',
+                            borderRadius: 2,
+                            overflow: 'hidden',
+                            border: '2px solid transparent',
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                              border: '2px solid',
+                              borderColor: 'primary.main',
+                              transform: 'scale(1.05)',
+                              boxShadow: '0 8px 16px rgba(0,0,0,0.15)'
+                            },
+                            '&:focus': {
+                              outline: '2px solid',
+                              outlineColor: 'primary.main',
+                              outlineOffset: '2px'
+                            }
+                          }}
+                          onClick={() => openArtworkGallery(index)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              openArtworkGallery(index)
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`View artwork ${index + 1} in gallery`}
+                        >
+                          <img
+                            src={`https://images.igdb.com/igdb/image/upload/t_screenshot_med/${artwork.image_id}.jpg`}
+                            alt={`Artwork ${index + 1}`}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              objectPosition: 'center'
+                            }}
+                            loading="lazy"
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                    {(game.igdbDetails as any).artworkDetails.length > 2 && (
+                      <Typography
+                        variant="caption"
+                        color="primary"
+                        sx={{
+                          display: 'block',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          p: 1,
+                          borderRadius: 1,
+                          backgroundColor: 'primary.main',
+                          color: 'primary.contrastText',
+                          fontWeight: 600,
+                          transition: 'background-color 0.2s',
+                          '&:hover': {
+                            backgroundColor: 'primary.dark'
+                          }
+                        }}
+                        onClick={() => openArtworkGallery(0)}
+                      >
+                        {t('gamedetail_view_full_artworks_gallery')} ({(game.igdbDetails as any).artworkDetails.length} {t('gamedetail_images_count')})
+                      </Typography>
+                    )}
+                  </Box>
                 )}                {/* Game Type */}
                 {(game.igdbDetails as any).gameTypeDetails && (
                   <Typography variant="body2" gutterBottom>
@@ -952,7 +1057,8 @@ export default function GameDetailDialog({
                 )}
               </CardContent>
             </Card>
-          )}          {!game.igdbGameId && (
+          )}          
+          {!game.igdbGameId && (
             <Alert 
               severity="info" 
               sx={{ 
@@ -1195,6 +1301,168 @@ export default function GameDetailDialog({
                   transition: 'all 0.2s ease'
                 }}
                 onClick={() => setSelectedImageIndex(index)}
+              />
+            ))}
+          </Box>
+        </Box>
+      </Modal>
+    )}
+    {/* Artworks Gallery Modal */}
+    {game && (game.igdbDetails as any)?.artworkDetails && (
+      <Modal
+        open={artworkGalleryOpen}
+        onClose={closeArtworkGallery}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+          sx: { backgroundColor: 'rgba(0, 0, 0, 0.95)' }
+        }}
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: { xs: '100vw', md: '90vw' },
+            height: { xs: '100vh', md: '90vh' },
+            bgcolor: { xs: 'black', md: 'background.paper' },
+            borderRadius: { xs: 0, md: 2 },
+            boxShadow: 24,
+            p: { xs: 0, md: 2 },
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Gallery Header */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: { xs: 1, md: 2 },
+            borderBottom: { xs: 0, md: 1 },
+            borderColor: 'divider',
+            pb: { xs: 1, md: 2 },
+            px: { xs: 2, md: 0 },
+            bgcolor: { xs: 'rgba(0,0,0,0.8)', md: 'transparent' },
+            color: { xs: 'white', md: 'inherit' }
+          }}>            <Typography variant="h6" sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}>
+              {t('gamedetail_artworks_label')} ({selectedArtworkIndex + 1}/{(game!.igdbDetails as any)?.artworkDetails?.length || 0})
+            </Typography>
+            <IconButton 
+              onClick={closeArtworkGallery}
+              sx={{ color: { xs: 'white', md: 'inherit' } }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+
+          {/* Main Image Area */}
+          <Box sx={{ 
+            flex: 1, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            position: 'relative',
+            mb: { xs: 1, md: 2 },
+            px: { xs: 1, md: 0 }
+          }}>
+            {(game!.igdbDetails as any)?.artworkDetails && (game!.igdbDetails as any).artworkDetails.length > 0 && (
+              <>
+                {/* Previous Button */}
+                <IconButton
+                  onClick={prevArtwork}
+                  sx={{
+                    position: 'absolute',
+                    left: { xs: 5, md: 10 },
+                    zIndex: 1,
+                    bgcolor: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    width: { xs: 40, md: 48 },
+                    height: { xs: 40, md: 48 },
+                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' }
+                  }}
+                >
+                  <ChevronLeft />
+                </IconButton>
+
+                {/* Main Image */}
+                <img
+                  src={`https://images.igdb.com/igdb/image/upload/t_original/${(game!.igdbDetails as any).artworkDetails[selectedArtworkIndex]?.image_id}.jpg`}
+                  alt={`Artwork ${selectedArtworkIndex + 1}`}
+                  style={{
+                    maxHeight: isMobile ? '70vh' : '60vh',
+                    width: 'auto',
+                    maxWidth: '100%',
+                    objectFit: 'contain',
+                    borderRadius: isMobile ? '0' : '8px',
+                    display: 'block',
+                    margin: 'auto'
+                  }}
+                />
+
+                {/* Next Button */}
+                <IconButton
+                  onClick={nextArtwork}
+                  sx={{
+                    position: 'absolute',
+                    right: { xs: 5, md: 10 },
+                    zIndex: 1,
+                    bgcolor: 'rgba(0, 0, 0, 0.7)',
+                    color: 'white',
+                    width: { xs: 40, md: 48 },
+                    height: { xs: 40, md: 48 },
+                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.8)' }
+                  }}
+                >
+                  <ChevronRight />
+                </IconButton>
+              </>
+            )}
+          </Box>
+
+          {/* Thumbnail Strip */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 1, 
+            overflowX: 'auto', 
+            py: 1,
+            borderTop: { xs: 0, md: 1 },
+            borderColor: 'divider',
+            pt: { xs: 1, md: 2 },
+            px: { xs: 2, md: 0 },
+            bgcolor: { xs: 'rgba(0,0,0,0.8)', md: 'transparent' },
+            '&::-webkit-scrollbar': {
+              height: 6,
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              borderRadius: 3,
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: 'rgba(255,255,255,0.3)',
+              borderRadius: 3,
+            },
+          }}>
+            {(game!.igdbDetails as any)?.artworkDetails?.map((artwork: any, index: number) => (              <img
+                key={artwork.igdbId}
+                src={`https://images.igdb.com/igdb/image/upload/t_thumb/${artwork.image_id}.jpg`}
+                alt={`Artwork Thumbnail ${index + 1}`}
+                style={{
+                  width: isMobile ? '60px' : '80px',
+                  height: isMobile ? '35px' : '50px',
+                  objectFit: 'cover',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  border: selectedArtworkIndex === index 
+                    ? `3px solid ${theme.palette.primary.main}` 
+                    : `1px solid ${theme.palette.divider}`,
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease'
+                }}
+                onClick={() => setSelectedArtworkIndex(index)}
               />
             ))}
           </Box>

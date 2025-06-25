@@ -186,6 +186,7 @@ model IgdbGames {
   // Media and content (stored as JSON arrays or individual IDs)
   cover                     Int?     // Reference ID for Game Cover
   screenshots               String?  // Array of Screenshot IDs (stored as JSON string)
+  artworks                  String?  // Array of Artwork IDs (stored as JSON string)
   
   // Game content categorization (stored as JSON arrays)
   age_ratings               String?  // Array of Age Rating IDs (stored as JSON string)
@@ -200,6 +201,15 @@ model IgdbGames {
   // Sync metadata - which IGDB platform this game was synced for
   platformId                Int?     // IGDB Platform ID this was synced for
   platformVersionId         Int?     // IGDB Platform Version ID this was synced for
+}
+
+model IgdbArtworks {
+  igdbId        Int     @id // IGDB artwork ID (id field) - PRIMARY KEY
+  artwork_type  Int?   // Artwork type (see IGDB docs)
+  height        Int?   // The height of the image in pixels
+  image_id      String? // The ID of the image used to construct an IGDB image link
+  url           String? // The website address (URL) of the item
+  width         Int?   // The width of the image in pixels
 }
 
 model IgdbAgeRatingCategories {

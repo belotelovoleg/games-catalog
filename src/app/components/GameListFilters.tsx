@@ -259,3 +259,7 @@ export default function GameListFilters({
     </Paper>
   )
 }
+
+// Add to your i18n translation files:
+// "igdbsync_artworks_label": "Artworks",
+// "igdbsync_artworks_desc": "Game artworks and concept art",

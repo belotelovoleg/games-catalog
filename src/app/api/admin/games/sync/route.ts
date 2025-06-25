@@ -82,6 +82,7 @@ async function fetchGamesFromIGDB(platformId: number): Promise<IGDBGame[]> {
     'url',
     'cover',
     'screenshots',
+    'artworks', // <-- Added artworks field
     'age_ratings',
     'alternative_names',
     'franchise',
@@ -180,6 +181,7 @@ async function saveGamesToDB(games: IGDBGame[], platformInfo: { id: number, igdb
         // Media and images
         cover: game.cover || null,
         screenshots: game.screenshots ? JSON.stringify(game.screenshots) : null,
+        artworks: (game as any).artworks ? JSON.stringify((game as any).artworks) : null,
         
         // Game companies and credits
         involved_companies: game.involved_companies ? JSON.stringify(game.involved_companies) : null,
