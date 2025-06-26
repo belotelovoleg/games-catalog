@@ -11,9 +11,11 @@ import {
   Box,
   Typography,
   Stack,
-  useTheme
+  useTheme,
+  Button
 } from '@mui/material'
 import { Delete as DeleteIcon } from '@mui/icons-material'
+import React, { useRef, useState } from 'react'
 
 interface UserGame {
   id: number
@@ -22,6 +24,7 @@ interface UserGame {
   igdbGameId: number | null
   name: string
   rating: number | null
+  photoUrl?: string | null // S3 photo URL if exists
   status: 'OWNED' | 'WISHLISTED'
   condition: 'MINT' | 'NEAR_MINT' | 'EXCELLENT' | 'VERY_GOOD' | 'GOOD' | 'FAIR' | 'POOR' | 'SEALED' | null
   notes: string | null
@@ -119,11 +122,57 @@ export default function GameTableList({
 }: GameTableListProps) {
   const theme = useTheme()
 
+  // Track upload state per game
+  const [uploadingId, setUploadingId] = useState<number | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({})
+  const fileInputs = useRef<Record<number, HTMLInputElement | null>>({})
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'OWNED': return 'success'
       case 'WISHLISTED': return 'primary'
       default: return 'default'
+    }
+  }
+
+  // Handle file input click
+  const handleAddPhotoClick = (gameId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setUploadError(null)
+    fileInputs.current[gameId]?.click()
+  }
+
+  // Handle file selection and upload
+  const handleFileChange = async (game: GameWithIgdbDetails, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingId(game.id)
+    setUploadError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch(`/api/user/games/${game.id}/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        const err = await res.text()
+        throw new Error(err || 'Upload failed')
+      }
+      // Expecting the response to contain the new photo URL
+      const data = await res.json()
+      const url = data.photoUrl || data.url || null
+      if (url) {
+        setPhotoUrls(prev => ({ ...prev, [game.id]: url }))
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed')
+    } finally {
+      setUploadingId(null)
+      // Clear the file input value so the same file can be re-selected
+      if (fileInputs.current[game.id]) fileInputs.current[game.id]!.value = ''
     }
   }
 
@@ -142,6 +191,7 @@ export default function GameTableList({
         }}>
           <TableRow>
             <TableCell sx={{ fontWeight: 600 }}>Name</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>Photo</TableCell>
             {showPlatform && <TableCell sx={{ fontWeight: 600 }}>Platform</TableCell>}
             <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
             <TableCell sx={{ fontWeight: 600 }}>Details</TableCell>
@@ -161,7 +211,8 @@ export default function GameTableList({
                 }
               }}
               onClick={() => onGameClick(game)}
-            ><TableCell>
+            >
+              <TableCell>
                   <Box>
                     <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                       {game.name}
@@ -182,6 +233,45 @@ export default function GameTableList({
                       />
                     )}
                   </Box>
+                </TableCell>
+                <TableCell>
+                  {game.photoUrl || photoUrls[game.id] ? (
+                    <Box
+                      component="img"
+                      src={photoUrls[game.id] || game.photoUrl!}
+                      alt={`${game.name} photo`}
+                      sx={{
+                        maxHeight: 100,
+                        maxWidth: 120,
+                        borderRadius: 2,
+                        objectFit: 'cover',
+                        boxShadow: 1,
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    />
+                  ) : (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        ref={el => { fileInputs.current[game.id] = el; }}
+                        onClick={e => e.stopPropagation()}
+                        onChange={e => handleFileChange(game, e)}
+                      />
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={e => handleAddPhotoClick(game.id, e)}
+                        disabled={uploadingId === game.id}
+                      >
+                        {uploadingId === game.id ? 'Uploading...' : 'Add Photo'}
+                      </Button>
+                      {uploadError && uploadingId === null && (
+                        <Typography variant="caption" color="error.main">{uploadError}</Typography>
+                      )}
+                    </>
+                  )}
                 </TableCell>
                 {showPlatform && (
                   <TableCell>

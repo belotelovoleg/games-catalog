@@ -16,7 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key'
 async function getUserFromToken(req: Request) {
   const authHeader = req.headers.get('authorization') || req.headers.get('cookie')
   let token = null
-  
+
   if (authHeader?.startsWith('Bearer ')) {
     token = authHeader.substring(7)
   } else if (authHeader?.includes('token=')) {
@@ -40,32 +40,41 @@ export async function POST(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const formData = await req.formData()
-  const file = formData.get('file') as File
+  const gameId = parseInt(params.id)
 
-  if (!file || !file.type.startsWith('image/')) {
-    return NextResponse.json({ error: 'Invalid file' }, { status: 400 })
+  // Try file upload
+  const file = formData.get('file') as File | null
+  if (file && file.type.startsWith('image/')) {
+    const key = `usergames/${user.id}/${gameId}.jpg`
+    const arrayBuffer = await file.arrayBuffer()
+
+    await s3.send(new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME!,
+      Key: key,
+      Body: Buffer.from(arrayBuffer),
+      ContentType: file.type,
+      CacheControl: 'no-cache',
+    }))
+
+    const url = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.S3_REGION}.amazonaws.com/${key}?v=${Date.now()}`
+
+    await prisma.userGame.update({
+      where: { id: gameId },
+      data: { photoUrl: url },
+    })
+
+    return NextResponse.json({ photoUrl: url })
   }
 
-  const gameId = parseInt(params.id)
-  const key = `usergames/${user.id}/${gameId}.jpg`
+  // Try external URL
+  const url = formData.get('url')?.toString()
+  if (url?.startsWith('http')) {
+    await prisma.userGame.update({
+      where: { id: gameId },
+      data: { photoUrl: url },
+    })
+    return NextResponse.json({ photoUrl: url })
+  }
 
-  const arrayBuffer = await file.arrayBuffer()
-
-  await s3.send(new PutObjectCommand({
-    Bucket: process.env.S3_BUCKET_NAME,
-    Key: key,
-    Body: Buffer.from(arrayBuffer),
-    ContentType: file.type,
-    CacheControl: 'no-cache', // for instant updates
-    ACL: 'public-read',
-  }))
-
-  const url = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.S3_REGION}.amazonaws.com/${key}?v=${Date.now()}`
-
-  await prisma.userGame.update({
-    where: { id: gameId },
-    data: { photoUrl: url },
-  })
-
-  return NextResponse.json({ photoUrl: url })
+  return NextResponse.json({ error: 'No valid image or URL provided' }, { status: 400 })
 }

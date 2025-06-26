@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogTitle,
@@ -12,14 +11,12 @@ import {
   Box,
   Chip,
   Alert,
-  Divider,
   TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Stack,
-  Grid,
   IconButton,
   Modal,
   Backdrop,
@@ -62,6 +59,7 @@ interface UserGame {
   notes: string | null
   createdAt: string
   updatedAt: string
+  photoUrl?: string | null // S3 photo URL if exists
 }
 
 interface GameWithIgdbDetails extends UserGame {
@@ -449,8 +447,31 @@ export default function GameDetailDialog({
             flex: { xs: '1', lg: '0 0 280px' },
             order: { xs: 2, lg: 1 }
           }}>
-            {/* Cover Image */}
-            {(game.igdbDetails as any)?.coverDetails && (
+            {/* Cover Image or User Photo */}
+            {game.photoUrl ? (
+              <Box sx={{ mb: 2, position: 'sticky', top: 0 }}>
+                <img
+                  src={game.photoUrl}
+                  alt={`${game.name} user photo`}
+                  style={{
+                    width: '100%',
+                    maxWidth: '280px',
+                    height: 'auto',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                    display: 'block',
+                    margin: '0 auto',
+                    transition: 'transform 0.2s ease-in-out'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                />
+              </Box>
+            ) : ( (game.igdbDetails as any)?.coverDetails && (
               <Box sx={{ mb: 2, position: 'sticky', top: 0 }}>
                 <img
                   src={(game.igdbDetails as any).coverDetails.url?.replace('t_thumb', 't_cover_big') || ''}
@@ -465,15 +486,15 @@ export default function GameDetailDialog({
                     margin: '0 auto',
                     transition: 'transform 0.2s ease-in-out'
                   }}
-                  onMouseEnter={(e) => {
+                  onMouseEnter={e => {
                     e.currentTarget.style.transform = 'scale(1.02)';
                   }}
-                  onMouseLeave={(e) => {
+                  onMouseLeave={e => {
                     e.currentTarget.style.transform = 'scale(1)';
                   }}
                 />
               </Box>
-            )}
+            ))}
 
             {/* Quick Info Card */}            <Card sx={{ 
               mb: 2, 
@@ -1064,7 +1085,8 @@ export default function GameDetailDialog({
                 )}
               </CardContent>
             </Card>
-          )}          
+          )}         
+           {/* Super Comment */}
           {!game.igdbGameId && (
             <Alert 
               severity="info" 
@@ -1396,19 +1418,43 @@ export default function GameDetailDialog({
                 </IconButton>
 
                 {/* Main Image */}
-                <img
-                  src={`https://images.igdb.com/igdb/image/upload/t_original/${(game!.igdbDetails as any).artworkDetails[selectedArtworkIndex]?.image_id}.jpg`}
-                  alt={`Artwork ${selectedArtworkIndex + 1}`}
-                  style={{
-                    maxHeight: isMobile ? '70vh' : '60vh',
-                    width: 'auto',
-                    maxWidth: '100%',
-                    objectFit: 'contain',
-                    borderRadius: isMobile ? '0' : '8px',
-                    display: 'block',
-                    margin: 'auto'
-                  }}
-                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                  <img
+                    src={`https://images.igdb.com/igdb/image/upload/t_original/${(game!.igdbDetails as any).artworkDetails[selectedArtworkIndex]?.image_id}.jpg`}
+                    alt={`Artwork ${selectedArtworkIndex + 1}`}
+                    style={{
+                      maxHeight: isMobile ? '70vh' : '60vh',
+                      width: 'auto',
+                      maxWidth: '100%',
+                      objectFit: 'contain',
+                      borderRadius: isMobile ? '0' : '8px',
+                      display: 'block',
+                      margin: 'auto'
+                    }}
+                  />
+                  {/* Set as Game Photo Button under image */}
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={async () => {
+                      if (!game) return;
+                      const artwork = (game.igdbDetails as any).artworkDetails[selectedArtworkIndex];
+                      if (!artwork?.image_id) return;
+                      const url = `https://images.igdb.com/igdb/image/upload/t_original/${artwork.image_id}.jpg`;
+                      const formData = new FormData();
+                      formData.append('url', url);
+                      await fetch(`/api/user/games/${game.id}/upload`, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'include',
+                      });
+                      if (typeof onGameUpdated === 'function') onGameUpdated();
+                    }}
+                    sx={{ mt: 2, minWidth: 180 }}
+                  >
+                    {t('gamedetail_set_as_photo')}
+                  </Button>
+                </Box>
 
                 {/* Next Button */}
                 <IconButton

@@ -11,6 +11,7 @@ import {
   Divider
 } from '@mui/material'
 import { Delete as DeleteIcon } from '@mui/icons-material'
+import React, { useRef, useState } from 'react'
 
 interface UserGame {
   id: number
@@ -19,6 +20,7 @@ interface UserGame {
   igdbGameId: number | null
   name: string
   rating: number | null
+  photoUrl?: string | null // S3 photo URL if exists
   status: 'OWNED' | 'WISHLISTED'
   condition: 'MINT' | 'NEAR_MINT' | 'EXCELLENT' | 'VERY_GOOD' | 'GOOD' | 'FAIR' | 'POOR' | 'SEALED' | null
   notes: string | null
@@ -116,11 +118,57 @@ export default function GameCardList({
 }: GameCardListProps) {
   const theme = useTheme()
 
+  // Track upload state per game
+  const [uploadingId, setUploadingId] = useState<number | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({})
+  const fileInputs = useRef<Record<number, HTMLInputElement | null>>({})
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'OWNED': return 'success'
       case 'WISHLISTED': return 'primary'
       default: return 'default'
+    }
+  }
+
+  // Handle file input click
+  const handleAddPhotoClick = (gameId: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setUploadError(null)
+    fileInputs.current[gameId]?.click()
+  }
+
+  // Handle file selection and upload
+  const handleFileChange = async (game: GameWithIgdbDetails, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingId(game.id)
+    setUploadError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch(`/api/user/games/${game.id}/upload`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      })
+      if (!res.ok) {
+        const err = await res.text()
+        throw new Error(err || 'Upload failed')
+      }
+      // Expecting the response to contain the new photo URL
+      const data = await res.json()
+      const url = data.photoUrl || data.url || null
+      if (url) {
+        setPhotoUrls(prev => ({ ...prev, [game.id]: url }))
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed')
+    } finally {
+      setUploadingId(null)
+      // Clear the file input value so the same file can be re-selected
+      if (fileInputs.current[game.id]) fileInputs.current[game.id]!.value = ''
     }
   }
 
@@ -143,6 +191,49 @@ export default function GameCardList({
           }}
           onClick={() => onGameClick(game)}
         >
+          {/* Photo section */}
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 120, mb: 1 }}>
+            {game.photoUrl || photoUrls[game.id] ? (
+              <Box
+                component="img"
+                src={photoUrls[game.id] || game.photoUrl!}
+                alt={`${game.name} photo`}
+                sx={{
+                  maxHeight: 120,
+                  width: '100%',
+                  maxWidth: '100%',
+                  borderRadius: 2,
+                  objectFit: 'cover',
+                  boxShadow: 1,
+                }}
+                onClick={e => e.stopPropagation()}
+              />
+            ) : (
+              <>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  ref={el => { fileInputs.current[game.id] = el; }}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => handleFileChange(game, e)}
+                />
+                <Chip
+                  label={uploadingId === game.id ? 'Uploading...' : 'Add Photo'}
+                  color="primary"
+                  variant="outlined"
+                  clickable
+                  onClick={e => handleAddPhotoClick(game.id, e)}
+                  sx={{ fontWeight: 600 }}
+                  disabled={uploadingId === game.id}
+                />
+                {uploadError && uploadingId === null && (
+                  <Typography variant="caption" color="error.main">{uploadError}</Typography>
+                )}
+              </>
+            )}
+          </Box>
+
           <CardContent sx={{ pb: 1 }}>
             {/* Game Title and Status */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
