@@ -84,6 +84,7 @@ model UserGame {
   igdbGameId  Int?     // Reference to IgdbGames - optional, can be null for custom games
   name        String   // Game name (from IGDB initially, but user can rename)
   rating      Float?   // User's own rating (from IGDB initially, but user can change)
+  photoUrl    String?  // Photo of a game on S3
   
   // Collection details
   status      GameStatus    // OWNED or WISHLISTED

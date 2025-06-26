@@ -94,6 +94,13 @@ interface GameWithIgdbDetails extends UserGame {
       url?: string
       width?: number
     }>
+    artworkDetails?: Array<{
+      igdbId: number
+      image_id?: string
+      url?: string
+      width?: number
+      height?: number
+    }>
     genreDetails?: Array<{
       igdbId: number
       name: string
