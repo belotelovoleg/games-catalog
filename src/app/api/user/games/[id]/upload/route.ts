@@ -34,7 +34,7 @@ async function getUserFromToken(req: Request) {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
   const user = await getUserFromToken(req)
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
