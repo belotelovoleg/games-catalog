@@ -15,8 +15,8 @@ applications:
             - echo "JWT_SECRET exists:" $(if [ -n "$JWT_SECRET" ]; then echo "YES"; else echo "NO"; fi)
             - echo "IGDB_CLIENT_SECRET exists:" $(if [ -n "$IGDB_CLIENT_SECRET" ]; then echo "YES"; else echo "NO"; fi)
             - echo "NEXTAUTH_URL exists:" $(if [ -n "$NEXTAUTH_URL" ]; then echo "YES"; else echo "NO"; fi)
-            - echo "AWS_ACCESS_KEY_ID exists:" $(if [ -n "$AWS_ACCESS_KEY_ID" ]; then echo "YES"; else echo "NO"; fi)
-            - echo "AWS_SECRET_ACCESS_KEY exists:" $(if [ -n "$AWS_SECRET_ACCESS_KEY" ]; then echo "YES"; else echo "NO"; fi)
+            - echo "S3_ACCESS_KEY_ID exists:" $(if [ -n "$S3_ACCESS_KEY_ID" ]; then echo "YES"; else echo "NO"; fi)
+            - echo "S3_SECRET_ACCESS_KEY exists:" $(if [ -n "$S3_SECRET_ACCESS_KEY" ]; then echo "YES"; else echo "NO"; fi)
             - echo "S3_BUCKET_NAME exists:" $(if [ -n "$S3_BUCKET_NAME" ]; then echo "YES"; else echo "NO"; fi)
             - echo "S3_REGION exists:" $(if [ -n "$S3_REGION" ]; then echo "YES"; else echo "NO"; fi)
             - echo "📝 Creating .env.production file with environment variables..."
@@ -25,8 +25,8 @@ applications:
             - echo "IGDB_CLIENT_SECRET=$IGDB_CLIENT_SECRET" >> .env.production
             - echo "IGDB_CLIENT_ID=$IGDB_CLIENT_ID" >> .env.production
             - echo "NEXTAUTH_URL=$NEXTAUTH_URL" >> .env.production
-            - echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> .env.production
-            - echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> .env.production
+            - echo "S3_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID" >> .env.production
+            - echo "S3_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY" >> .env.production
             - echo "S3_BUCKET_NAME=$S3_BUCKET_NAME" >> .env.production
             - echo "S3_REGION=$S3_REGION" >> .env.production
             - echo "NODE_ENV=production" >> .env.production
