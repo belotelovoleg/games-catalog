@@ -10,7 +10,6 @@ import {
   Snackbar,
   CircularProgress,
   Paper,
-  Stack,
   Divider,
   LinearProgress,
   Card,
@@ -21,25 +20,13 @@ import {
   FormControl,
   InputLabel,
   Chip,
-  Tooltip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  IconButton
 } from '@mui/material'
 import {
   Storage,
-  DeviceHub,
   SportsEsports,
   Category,
-  Image,
   CheckCircle,
   PlayArrow,
-  Info,
-  Refresh
 } from '@mui/icons-material'
 
 interface Platform {
@@ -703,6 +690,3 @@ export default function IGDBComprehensiveSync() {
   )
 }
 
-// Add to your i18n translation files:
-// "igdbsync_artworks_label": "Artworks",
-// "igdbsync_artworks_desc": "Game artworks and concept art",
